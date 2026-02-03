@@ -17,7 +17,9 @@
 % Updated: 16-Dec-2025
 
 clear all
-load('C:\Users\user\Documents\Noa\Thesis_EyeTracking\01_Experiment\Eyedata\Subject_993_eyeData.mat');
+dataFile = 'C:\Projects\Thesis_EyeTracking\old_data\Subject_551_eyeData.mat';
+S = load(dataFile);
+edfStruct = S.edfStruct;
 
 
 % Eye_file = ['/Volumes/Untitled - Data/Post-doc OSU/Numerasity/Exp3/Eyedata/Subject_' num2str(subject) ' eyeData.mat'];
