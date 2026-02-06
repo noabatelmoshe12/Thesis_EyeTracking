@@ -5,27 +5,26 @@ This project automates the processing of MATLAB Eye Tracking data and performs s
 ## Setup
 
 1.  **Python Environment**:
-    This project uses a virtual environment.
+    This project uses `uv` for dependency management.
     ```bash
     cd python_processing
-    python -m venv .venv
-    .venv\Scripts\activate
-    pip install -r requirements.txt
+    # Sync dependencies (creates .venv if needed)
+    uv sync
     ```
-    *(Note: `pandas` and `jupyter` are required.)*
+    *(Note: `pandas`, `jupyter` and `matlabengine` are required.)*
 
 2.  **MATLAB Engine for Python**:
-    For the automation script (`process_eye_data.py`) to work, you must install the MATLAB Engine API for Python.
+    The project requires `matlabengine` version 25.1. This is managed via `uv`, but ensure your local MATLAB installation is compatible if building from source.
     
-    -   **Option A**: PyPI (for newer MATLAB versions)
-        ```bash
-        pip install matlabengine
-        ```
-    -   **Option B**: From MATLAB root
-        Navigate to your MATLAB installation folder, e.g., `C:\Program Files\MATLAB\R2023b\extern\engines\python` and run:
-        ```bash
-        python setup.py install
-        ```
+    If you need to install it manually or check the version:
+    ```bash
+    uv add "matlabengine==25.1.*"
+    ```
+    
+    To verify the connection:
+    ```bash
+    uv run python -c "import matlab.engine; print('MATLAB Engine verified')"
+    ```
 
 ## Usage
 
