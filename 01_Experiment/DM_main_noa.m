@@ -735,8 +735,14 @@ Screen('Flip', wPtr);
 end
 
 try
-%% ---------- Post-experiment model fit --------------------------
+    fprintf('Calculating decision weights for supervisor report...\n');
+    
+%% ---------- Post-experiment model fit --------------------(For Supervisors-show Gal,Marius)
+% This section calculates the implied weights based on user choices.
+% Wrapped in try-catch to prevent crash if regression fails.
+
 % Convert choices into binary (1 = choose A, 0 = choose B)
+% create a temporary variable for analysis so we don't touch the raw data
 Subject_Choice = Sub_Choice;
 Subject_Choice(Subject_Choice==2) = 0;
 
