@@ -348,6 +348,8 @@ msgContinue = 'Press SPACE to continue';
 %% ==============================================================
 % **Start main experiment loop**
 
+% >>> PROTECTED REGION START: Wraps experiment in try-catch <<<
+try
 for setIdx = 1:numOfSets
     % ------------------------------------------------------------
     % 1. Show block-specific instructions.
@@ -775,6 +777,8 @@ Screen('FillRect', wPtr, 0); % Black background
 Screen('DrawTexture', wPtr, texEnd);
 Screen('Flip', wPtr);
 KbWait; WaitSecs(2*imageDuration);
+
+
 
 %% ---------- EyeLink shutdown & file transfer -------------------
 if ~dummymode

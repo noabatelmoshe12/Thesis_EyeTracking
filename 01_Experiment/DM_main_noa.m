@@ -348,6 +348,8 @@ msgContinue = 'Press SPACE to continue';
 %% ==============================================================
 % **Start main experiment loop**
 
+% >>> PROTECTED REGION START: Wraps experiment in try-catch <<<
+try
 for setIdx = 1:numOfSets
     % ------------------------------------------------------------
     % 1. Show block-specific instructions.
@@ -775,6 +777,46 @@ Screen('FillRect', wPtr, 0); % Black background
 Screen('DrawTexture', wPtr, texEnd);
 Screen('Flip', wPtr);
 KbWait; WaitSecs(2*imageDuration);
+
+% >>> PROTECTED REGION END: Handling errors if crash occurs <<<
+catch ME
+    % !!! CRASH HANDLER !!!
+    fprintf('\n----------------------------------------\n');
+    fprintf('CRASH DETECTED! Attempting to rescue data...\n');
+    fprintf('Error Message: %s\n', ME.message);
+    
+    % 1. Save Behavioral Data collected so far
+    try
+        CrashSaveName = sprintf('Subject_%d_CRASH_BACKUP.mat', Subject_Number);
+        save(CrashSaveName, 'Data');
+        fprintf('>> SUCCESS: Behavioral data saved to: %s\n', CrashSaveName);
+    catch
+        fprintf('>> FAILED to save behavioral data.\n');
+    end
+
+    % 2. Rescue EyeLink Data (EDF)
+    if ~dummymode
+        try
+            Eyelink('StopRecording');
+            Eyelink('CloseFile');
+            fprintf('>> Retrieving EDF file from EyeLink Host PC...\n');
+            status = Eyelink('ReceiveFile');
+            if status > 0
+                fprintf('>> SUCCESS: EDF file rescued!\n');
+            else
+                fprintf('>> WARNING: EDF file transfer failed (status=%d).\n', status);
+            end
+            Eyelink('Shutdown');
+        catch
+            fprintf('>> FAILED to communicate with EyeLink during crash.\n');
+        end
+    end
+
+    Screen('CloseAll');
+    ShowCursor;
+    fprintf('----------------------------------------\n');
+    rethrow(ME); % Display error in Command Window
+end
 
 %% ---------- EyeLink shutdown & file transfer -------------------
 if ~dummymode
