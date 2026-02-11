@@ -22,7 +22,7 @@ def process_subjects(source_dir, output_dir, project_root):
 
     # Find subject files
     # Pattern assumption: Subject_XXX_Results_Decision_Strategy_Experiment.mat
-    pattern = os.path.join(source_dir, "Subject_*_Results_Decision_Strategy_Experiment.mat")
+    pattern = os.path.join(source_dir, "Subject_*_eyeData.mat")
     files = glob.glob(pattern)
     
     print(f"Found {len(files)} files to process in {source_dir}")

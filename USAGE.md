@@ -28,7 +28,22 @@ uv run python_processing/process_eye_data.py
 2.  Connects to your `Analyze_eye_func.m` script.
 3.  Converts `.mat` files to CSVs in the `function/` folder.
 
-## 3. Running Interactive Analysis (Jupyter)
+## 3. Running  Analysis (Classification)
+
+To generate the  scanpath classification metrics (Horizontal vs Vertical scan index), run the analysis script. This script implements the logic from `classifyScanHV.m` purely in Python.
+
+**Command:**
+```powershell
+uv run python_processing/run_final_analysis.py
+```
+
+**What this does:**
+1.  Reads the processed CSV files from the `function/` folder.
+2.  Classifies movements as Horizontal, Vertical, or Other.
+3.  Calculates the H/(H+V) index for each trial/block.
+4.  Saves the consolidated results to `final_results.csv` in the project root.
+
+## 4. Running Interactive Analysis (Jupyter)
 
 To explore the data, validate results, or tweak the analysis logic interactively, use the Jupyter Notebook.
 
@@ -38,16 +53,17 @@ To explore the data, validate results, or tweak the analysis logic interactively
 uv run jupyter notebook python_processing/validation.ipynb
 ```
 
-## 4. Troubleshooting
+## 5. Troubleshooting
 
 *   **MATLAB Engine Error**: If you see an error about `matlab.engine`, ensure your MATLAB version matches the library version (currently configured for R2024b / 25.1).
 *   **Path Issues**: Always run `uv run` commands from the **root** folder (`Thesis_EyeTracking`) to ensure all paths are resolved correctly.
 
-## 5. Quick Reference
+## 6. Quick Reference
 
 | Task | Command |
 | :--- | :--- |
 | **Sync/Install** | `uv sync` |
 | **Process Data** | `uv run python_processing/process_eye_data.py` |
+| **Final Analysis** | `uv run python_processing/run_final_analysis.py` |
 | **Open Notebook**| `uv run jupyter notebook` |
 | **Check Python** | `uv run python --version` |

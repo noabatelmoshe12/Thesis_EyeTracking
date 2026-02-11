@@ -759,8 +759,7 @@ for k = 1:4, Data{11}{k+1} = weights4(k+1); end
 % Save final dataset (overwriting earlier incremental versions)
 save(sprintf('Subject_%d_Results_Decision_Strategy_Experiment.mat',...
     Subject_Number), 'Data');
-catch
-   fprintf('there was an error with the wieghting analysis')
+
 end
 
 %% ---------- Goodbye screen -------------------------------------
