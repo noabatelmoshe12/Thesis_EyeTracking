@@ -1,7 +1,4 @@
 %%%
-
-
-
 function [trialResults, blockResults] = classifyScanHV( ...
     fixationSequences, trialsPerBlock, numberOfBlocks, saveMatPath)
 % classifyScanHV
@@ -60,8 +57,17 @@ totalTrialsUsed      = min(totalTrialsAvailable, totalTrialsRequired);
 % ------------------------------------------------------------
 % Preallocate outputs
 % ------------------------------------------------------------
-trialResults = nan(totalTrialsUsed, 3);
-blockResults = nan(numberOfBlocks, 1);
+trialResults = nan(totalTrialsUsed, 4);
+% columns:
+% 1 = blockIndex
+% 2 = trialIndexWithinBlock
+% 3 = scanIndex
+% 4 = nTransitions (hl+vl)blockResults = nan(numberOfBlocks, 1);
+
+%store number of valid transitions
+trialTransitions = nan(totalTrialsUsed, 1);   % hl+vl per trial
+blockTransitions = nan(numberOfBlocks, 1);    % H+V per block
+
 
 globalTrialIndex = 0;  % counts trials across the whole experiment 
 % globalTrialIndex maps the sequential rows in fixationSequences to
@@ -175,7 +181,12 @@ for blockIndex = 1:numberOfBlocks
 
         % Store trial result
         trialResults(globalTrialIndex, :) = ...
-            [blockIndex, trialIndexWithinBlock, trialScanIndex];
+        [blockIndex, trialIndexWithinBlock, trialScanIndex, ...
+        (horizontalCount_trial + verticalCount_trial)];
+
+    
+        trialTransitions(globalTrialIndex) = horizontalCount_trial + verticalCount_trial;
+
     end
 
     % --------------------------------------------------------
@@ -188,21 +199,110 @@ for blockIndex = 1:numberOfBlocks
         blockResults(blockIndex) = NaN;
     end
 
+    blockTransitions(blockIndex) = horizontalCount_block + verticalCount_block;
+
+    fprintf('Block %d: scanIndex = %.5f | #Transitions = %d\n', ...
+    blockIndex, blockResults(blockIndex), blockTransitions(blockIndex));
+
+
+
     % --------------------------------------------------------
     % Plot per-trial scan index for this block
     % --------------------------------------------------------
-    rowsThisBlock = (trialResults(:,1) == blockIndex);
-    trialNumbers  = trialResults(rowsThisBlock, 2);
-    scanValues    = trialResults(rowsThisBlock, 3);
 
-    figure;
-    plot(trialNumbers, scanValues, '-o');
-    ylim([0 1]);
-    grid on;
-    xlabel('Trial number within block');
-    ylabel('Horizontal / (Horizontal + Vertical)');
-    title(sprintf('Block %d – Global scan index = %.3f', ...
-          blockIndex, blockResults(blockIndex)));
+        % --------------------------------------------------------
+    % Plot per-trial STRATEGY for this block (separate figure per block)
+    % Strategy categories (3):
+    %   - No scan     : no valid transitions in trial  (trialTransitions==0 OR scanIndex is NaN)
+    %   - Vertical    : scanIndex < 0.5
+    %   - Horizontal  : scanIndex > 0.5
+    %
+    % Visual encoding:
+    %   - Each point = one trial (no connecting lines)
+    %   - Dot size   ∝ number of valid transitions (evidence strength)
+    %   - Dot alpha  ∝ confidence = |scanIndex-0.5| * sqrt(nTransitions)
+    % --------------------------------------------------------
+
+    % collect trials of this block (already written into trialResults rows)
+    idxBlock = (trialResults(:,1) == blockIndex);
+
+    x = trialResults(idxBlock, 2);          % trial index within block
+    p = trialResults(idxBlock, 3);          % scanIndex (NaN possible)
+    n = trialTransitions(idxBlock);         % #valid transitions (hl+vl)
+
+    % if no trials were processed for this block (data ended early)
+    if isempty(x)
+        continue;
+    end
+
+    % sort by trial order for clean x-axis
+    [x, ord] = sort(x);
+    p = p(ord);
+    n = n(ord);
+
+    % --- Categorize strategy ---
+    % No scan: no evidence (0 transitions) or undefined scanIndex
+    noScanMask = (n == 0) | isnan(p);
+
+    % Vertical vs Horizontal (simple split at 0.5)
+    isVertical   = (~noScanMask) & (p < 0.5);
+    isHorizontal = (~noScanMask) & (p > 0.5);
+
+    % handle exact 0.5 (rare): treat as No scan / ambiguous
+    isAmbiguous = (~noScanMask) & (p == 0.5);
+
+    % Create y positions: 1=No scan, 2=Vertical, 3=Horizontal
+    y = nan(size(p));
+    y(noScanMask | isAmbiguous) = 1;
+    y(isVertical)   = 2;
+    y(isHorizontal) = 3;
+
+    % --- Dot size encodes evidence strength (#transitions) ---
+    % sqrt scaling prevents huge sizes for large n
+    dotSize = 40 + 25*sqrt(n);
+
+    % --- Alpha encodes confidence: |p-0.5| weighted by sqrt(n) ---
+    conf = abs(p - 0.5) .* sqrt(n);
+    conf(noScanMask | isAmbiguous) = 0;
+
+    if max(conf) > 0
+        alphaVals = 0.25 + 0.75*(conf / max(conf));  % range [0.25..1]
+    else
+        alphaVals = 0.25*ones(size(conf));
+    end
+
+    % --- Plot ---
+    figure; hold on; grid on;
+
+    for i = 1:numel(x)
+        h = scatter(x(i), y(i), dotSize(i), 'filled');
+        % Alpha reflects confidence (if supported)
+        try
+            h.MarkerFaceAlpha = alphaVals(i);
+            h.MarkerEdgeAlpha = 1;
+        catch
+            % If MATLAB version doesn't support alpha on scatter, ignore gracefully
+        end
+    end
+
+    yticks([1 2 3]);
+    yticklabels({'No scan','Vertical','Horizontal'});
+    xticks(x);
+    xlabel(sprintf('Trial index within Block %d', blockIndex));
+    title(sprintf('Block %d: Strategy per trial (size=#transitions, alpha=confidence)', blockIndex));
+
+    % Useful block-level info in subtitle
+    if ~isnan(blockResults(blockIndex))
+        subtitle(sprintf('blockScanIndex = %.3f | blockTransitions = %d', ...
+            blockResults(blockIndex), blockTransitions(blockIndex)));
+    else
+        subtitle(sprintf('blockScanIndex = NaN | blockTransitions = %d', ...
+            blockTransitions(blockIndex)));
+    end
+
+    xlim([min(x)-0.5, max(x)+0.5]);
+
+    
 end
 
 % ------------------------------------------------------------
@@ -210,6 +310,7 @@ end
 % ------------------------------------------------------------
 if ~isempty(saveMatPath)
     save(saveMatPath, 'trialResults', 'blockResults', ...
+         'trialTransitions', 'blockTransitions', ...
          'trialsPerBlock', 'numberOfBlocks');
 end
 

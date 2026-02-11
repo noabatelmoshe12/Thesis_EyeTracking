@@ -9,7 +9,7 @@
 % Participant selects the alternative they prefer on each trial.
 % Implements practice and experimental blocks, variable set size,
 % adaptive timing, performance feedback, and EyeLink recording.
-% Saves demographic data, trial-level behavio ur, accuracy,
+% Saves demographic data, trial-level behaviour, accuracy,
 % reaction times, and fitted logistic regression weights that
 % approximate each participant's attribute importance.
 %
@@ -34,7 +34,7 @@ rng('shuffle'); % randomise the seed based on system clock
 %Screen('Preference','SkipSyncTests', 1);
 
 % Disable accidental termination via Ctrl-C (ASCII decimal 46 = '.')
-% DisableKeysForKbCheck(46);
+%DisableKeysForKbCheck(46);
 
 % Set up escape key 'q' for emergency exit
 KbName('UnifyKeyNames');
@@ -81,9 +81,9 @@ Screen('TextSize', wPtr, 35);
 
 %% ---------- Experiment parameters ------------------------------
 numOfSets = 2; % 3-attribute and 4-attribute blocks
-numOfTrials = 6; % trials per block = 100
+numOfTrials = 8; % trials per block = 100
 numOfPractice = 1; % warm-up trials per block = 10
-breakTime = 5; % trials between mandatory breaks = 25
+breakTime = 2; % trials between mandatory breaks = 25
 numOfPoints = 0;
 imageDuration = 0.5; % minimum exposure for static images (sec)
 
@@ -140,7 +140,8 @@ Sub_Choice = nan(numOfSets*numOfTrials,1); % 1 = A, 2 = B
 
 % Cell array "Data" progressively collects everything to be saved
 % Indexing: {row}{column}. Each row = one "sheet".
-Data = cell(1,11);
+Data = cell(1,9); 
+%ita was (1,11) when part of analyze run 
 
 %% ---------- Generate all stimuli (practice + trials) -----------
 % Each stimulus is a matrix of size (attributes ֳ— 2 alternatives)
@@ -166,7 +167,9 @@ for setIdx = 1:numOfSets
         else
             Correct(trialIdx + (numOfTrials+numOfPractice)*(setIdx-1)) = 2;
         end
+        %להוסיף את הפקודה של השמירה של הedf 
     end
+    
 end
 
 % Pre-compute A-minus-B difference vectors for later logistic fit
@@ -290,7 +293,7 @@ for setIdx = 1:numOfSets
         textBounds = Screen('TextBounds', offPtr, 'B');
         textWidth = textBounds(3) - textBounds(1);
         textX = layout{1,3}(1) + CellSize(1)/2 - textWidth/2;
-        textY = layout{1,3}(2) +CellSize(2)/2 ;%- fontSize/2;
+         textY = layout{1,3}(2) +CellSize(2)/2 ;%- fontSize/2;
         DrawFormattedText(offPtr, 'B', textX, textY, Red);        
         
         %% Numeric attribute ratings - CENTERED
@@ -734,40 +737,30 @@ Screen('Flip', wPtr);
     
 end
 
-try
-    fprintf('Calculating decision weights for supervisor report...\n');
-    
-%% ---------- Post-experiment model fit --------------------(For Supervisors-show Gal,Marius)
-% This section calculates the implied weights based on user choices.
-% Wrapped in try-catch to prevent crash if regression fails.
-
-% Convert choices into binary (1 = choose A, 0 = choose B)
-% create a temporary variable for analysis so we don't touch the raw data
-Subject_Choice = Sub_Choice;
-Subject_Choice(Subject_Choice==2) = 0;
-
-% ----------- Logistic weights for 3-attribute block -------------
-Data{10}{1} = 'The weights for 3 attributes';
-trials3 = 1:numOfTrials;
-ok3 = ~isnan(Sub_Acc(trials3));
-Diff_3 = cell2mat(Differences(1, ok3))'; % n ֳ— 3
-[weights3, ~, ~] = glmfit(Diff_3, Subject_Choice(trials3(ok3)), 'binomial');
-for k = 1:3, Data{10}{k+1} = weights3(k+1); end % omit intercept
-
-% ----------- Logistic weights for 4-attribute block -------------
-Data{11}{1} = 'The weights for 4 attributes';
-trials4 = (numOfTrials+1):(2*numOfTrials);
-ok4 = ~isnan(Sub_Acc(trials4));
-Diff_4 = cell2mat(Differences(2, ok4))'; % n ֳ— 4
-[weights4,~,~] = glmfit(Diff_4, Subject_Choice(trials4(ok4)), 'binomial');
-for k = 1:4, Data{11}{k+1} = weights4(k+1); end
-
-% Save final dataset (overwriting earlier incremental versions)
-save(sprintf('Subject_%d_Results_Decision_Strategy_Experiment.mat',...
-    Subject_Number), 'Data');
-catch
-   fprintf('there was an error with the wieghting analysis')
-end
+%% ---------- Post-experiment model fit --------------------------
+% % Convert choices into binary (1 = choose A, 0 = choose B)
+% Subject_Choice = Sub_Choice;
+% Subject_Choice(Subject_Choice==2) = 0;
+% 
+% % ----------- Logistic weights for 3-attribute block -------------
+% Data{10}{1} = 'The weights for 3 attributes';
+% trials3 = 1:numOfTrials;
+% ok3 = ~isnan(Sub_Acc(trials3));
+% Diff_3 = cell2mat(Differences(1, ok3))'; % n ֳ— 3
+% [weights3, ~, ~] = glmfit(Diff_3, Subject_Choice(trials3(ok3)), 'binomial');
+% for k = 1:3, Data{10}{k+1} = weights3(k+1); end % omit intercept
+% 
+% % ----------- Logistic weights for 4-attribute block -------------
+% Data{11}{1} = 'The weights for 4 attributes';
+% trials4 = (numOfTrials+1):(2*numOfTrials);
+% ok4 = ~isnan(Sub_Acc(trials4));
+% Diff_4 = cell2mat(Differences(2, ok4))'; % n ֳ— 4
+% [weights4,~,~] = glmfit(Diff_4, Subject_Choice(trials4(ok4)), 'binomial');
+% for k = 1:4, Data{11}{k+1} = weights4(k+1); end
+% 
+% % Save final dataset (overwriting earlier incremental versions)
+% save(sprintf('Subject_%d_Results_Decision_Strategy_Experiment.mat',...
+%     Subject_Number), 'Data');
 
 %% ---------- Goodbye screen -------------------------------------
 texEnd = Screen('MakeTexture', wPtr, imread('end.jpg'));
