@@ -81,9 +81,9 @@ Screen('TextSize', wPtr, 35);
 
 %% ---------- Experiment parameters ------------------------------
 numOfSets = 2; % 3-attribute and 4-attribute blocks
-numOfTrials = 6; % trials per block = 100
+numOfTrials = 50; % trials per block = 100
 numOfPractice = 1; % warm-up trials per block = 10
-breakTime = 5; % trials between mandatory breaks = 25
+breakTime = 10; % trials between mandatory breaks = 25
 numOfPoints = 0;
 imageDuration = 0.5; % minimum exposure for static images (sec)
 
