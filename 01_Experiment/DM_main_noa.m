@@ -1,4 +1,4 @@
-
+ 
 % Variable Attribute Decision-Making Task.
 % Presents paired alternative "candidates" (A vs. B) described on
 % 3/4 subjective attributes:
