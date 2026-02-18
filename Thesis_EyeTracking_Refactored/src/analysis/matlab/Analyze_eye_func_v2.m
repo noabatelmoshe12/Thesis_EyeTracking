@@ -1,5 +1,17 @@
 function Analyze_eye_func(mat, subject_code, output_directory)
-% Analyze_eye_func converts the analysis script into a reusable function
+%%
+% Update – Analyze_eye v2
+% Date: 17.02.2026
+%
+% The original Analyze_eye code was implemented as a script.
+% It was later converted into a reusable function (Analyze_eye_func).
+%
+% This version is based on that function.
+% The only modification in this update is the addition of exporting
+% an extra table in long format that stores fixation-level data.
+%
+% Analyze_eye_func converts the analysis script into a reusable function.
+%
 % Input:
 %   mat: path to the .mat file containing edfStruct (or the struct itself)
 %   subject_code: identifier for the subject
@@ -83,6 +95,7 @@ function Analyze_eye_func(mat, subject_code, output_directory)
     min_sacc = 10;
     
     Fixations = {}; % Initialize
+    DetailedFixations = {'Subject', 'Block', 'Trial', 'FixationSeq', 'AOI', 'StartTime_ms', 'EndTime_ms', 'Duration_ms', 'SampleCount', 'Mean_X', 'Mean_Y', 'SD_X', 'SD_Y'}; % Header for detailed file
     Start = []; % Initialize Start to avoid undefined variable error
 
     for x = 1:length(edfStruct.FEVENT)
@@ -125,9 +138,11 @@ function Analyze_eye_func(mat, subject_code, output_directory)
                 end
 
                 Locations = double([edfStruct.FSAMPLE.gx(1,Start:End); edfStruct.FSAMPLE.gy(1,Start:End)]);
+                Times = double(edfStruct.FSAMPLE.time(1,Start:End)); % Extract timestamps
+                StimOnset = Times(1); % Time 0 for this trial
                 
                 % Check fixations
-                count_fix = 0; first = 0; Fix_loc = []; Fix = []; Z = []; Fix_time = zeros(1, length(Locations));
+                count_fix = 0; first = 0; Fix_loc = []; Fix = []; Fix_indices = []; Z = []; Fix_time = zeros(1, length(Locations));
                 
                 for z = 3:length(Locations)
                     if abs(Locations(1,z) - Locations(1,z-2)) < min_sacc && abs(Locations(2,z) - Locations(2,z-2)) < min_sacc
@@ -139,7 +154,23 @@ function Analyze_eye_func(mat, subject_code, output_directory)
                         end
                     elseif first == 1
                         if mean(Fix_loc) ~= 100000000 % Note: Original code check
-                            Fix = [Fix; mean(Fix_loc,1) std(Fix_loc,0,1)./sqrt(size(Fix_loc,1))];
+                            % Calcluate stats for current fixation
+                            curr_mean = mean(Fix_loc, 1);
+                            curr_std = std(Fix_loc, 0, 1);
+                            
+                            % Fix array stores Mean and Standard Error (limit compat with old code)
+                            Fix = [Fix; curr_mean curr_std./sqrt(size(Fix_loc,1))];
+                            
+                            % Capture Start/End indices for the fixation
+                            % The fixation covers the range [min(Z)-2, max(Z)]
+                            f_start_idx = Z(1) - 2;
+                            if f_start_idx < 1, f_start_idx = 1; end
+                            f_end_idx = Z(end);
+                            
+                            % Store detailed raw stats for later (Mean X, Mean Y, SD X, SD Y)
+                            Fix_raw_stats = [curr_mean(1), curr_mean(2), curr_std(1), curr_std(2)];
+                            Fix_indices = [Fix_indices; f_start_idx, f_end_idx, Fix_raw_stats];
+                            
                             Fix_time(Z) = Fix_time(Z) + 1;
                         end
                         count_fix = 0; first = 0; Fix_loc = []; Z = [];
@@ -149,7 +180,21 @@ function Analyze_eye_func(mat, subject_code, output_directory)
                 end
                 
                 if first == 1 
-                    Fix = [Fix; mean(Fix_loc,1) std(Fix_loc,0,1)./sqrt(size(Fix_loc,1))];
+                    % Calcluate stats for last fixation
+                    curr_mean = mean(Fix_loc, 1);
+                    curr_std = std(Fix_loc, 0, 1);
+                            
+                    Fix = [Fix; curr_mean curr_std./sqrt(size(Fix_loc,1))];
+                    
+                    % Capture Start/End indices for the last fixation
+                    f_start_idx = Z(1) - 2;
+                    if f_start_idx < 1, f_start_idx = 1; end
+                    f_end_idx = Z(end);
+                    
+                    % Store detailed raw stats
+                    Fix_raw_stats = [curr_mean(1), curr_mean(2), curr_std(1), curr_std(2)];
+                    Fix_indices = [Fix_indices; f_start_idx, f_end_idx, Fix_raw_stats];
+                    
                     count_fix = 0; first = 0; Fix_loc = [];
                 end
                 
@@ -163,10 +208,28 @@ function Analyze_eye_func(mat, subject_code, output_directory)
                         end
                     end
                     for t = 1:length(tmpp)
+                        aoi_label = NaN;
                         if tmpp(t) > 0
-                            Fix_sequance{t} = Cells{tmpp(t)};
+                            aoi_label = Cells{tmpp(t)};
+                            Fix_sequance{t} = aoi_label;
                         else 
                             Fix_sequance{t} = NaN; 
+                        end
+                        
+                        % --- Add to Detailed Report ---
+                        if t <= size(Fix_indices, 1)
+                            f_start_t = Times(Fix_indices(t,1)) - StimOnset; % Relative to stim onset
+                            f_end_t = Times(Fix_indices(t,2)) - StimOnset;
+                            f_dur = f_end_t - f_start_t;
+                            f_samples = Fix_indices(t,2) - Fix_indices(t,1) + 1; % Calculate sample count
+                            
+                            % Extract raw stats (stored in columns 3-6 of Fix_indices)
+                            f_mean_x = Fix_indices(t,3);
+                            f_mean_y = Fix_indices(t,4);
+                            f_sd_x = Fix_indices(t,5);
+                            f_sd_y = Fix_indices(t,6);
+                            
+                            DetailedFixations(end+1, :) = {subject_code, set_num, trial_num, t, aoi_label, f_start_t, f_end_t, f_dur, f_samples, f_mean_x, f_mean_y, f_sd_x, f_sd_y};
                         end
                     end
                     Fixations(count, 1:length(Fix_sequance)) = Fix_sequance';
@@ -183,15 +246,23 @@ function Analyze_eye_func(mat, subject_code, output_directory)
         mkdir(target_dir);
     end
     
-    % Construct output filename
+    % Construct output filenames
     output_filename = [char(string(subject_code)) '.csv'];
-    output_path = fullfile(target_dir, output_filename);
+    output_filename_detailed = [char(string(subject_code)) '_detailed.csv'];
     
-    % Write to CSV
+    output_path = fullfile(target_dir, output_filename);
+    output_path_detailed = fullfile(target_dir, output_filename_detailed);
+    
+    % Write to CSV (Simple Sequence)
     if ~isempty(Fixations)
         writecell(Fixations, output_path);
     else
         warning('No fixations found. Creating empty file.');
         fclose(fopen(output_path, 'w'));
+    end
+    
+    % Write to CSV (Detailed Long Format)
+    if size(DetailedFixations, 1) > 1 % Check if we have more than just the header
+        writecell(DetailedFixations, output_path_detailed);
     end
 end

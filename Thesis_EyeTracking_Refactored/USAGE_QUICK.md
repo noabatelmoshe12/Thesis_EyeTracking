@@ -1,17 +1,33 @@
-# Quick Start: Full Pipeline
+# Quick Start: Full Pipeline (Updated)
 
-I have created a single script to run the entire pipeline:
+This pipeline has been enhanced to produce **detailed, timestamped metrics** for deeper analysis.
 
 **Script:** `src/analysis/python/run_full_pipeline.py`
 
-**Usage:**
-1.  Place raw `.EDF` files in `data/raw/`.
-2.  Run:
-    ```bash
-    python Thesis_EyeTracking_Refactored/src/analysis/python/run_full_pipeline.py
-    ```
+## 🚀 How to Run
 
-**What it does:**
-- Converts `.EDF` to `.mat` (if needed, using MATLAB).
-- Runs fixation analysis (MATLAB).
-- Aggregates results into `data/final_results_summary.csv`.
+1.  **Prepare Data:**
+    *   Place your raw `.EDF` files in `data/raw/`.
+
+2.  **Execute:**
+    *   Open your terminal in the project root.
+    *   Run:
+        ```bash
+        python src/analysis/python/run_full_pipeline.py
+        ```
+
+## 📊 Expected Output
+
+The script will automatically:
+1.  Convert `.EDF` -> `.mat` (if you haven't already).
+2.  Run `Analyze_eye_func_v2.m` on each subject.
+3.  Generate inside `data/results/`:
+    *   **`Subject_XXX.csv`**: Basic fixation sequence (AOIs only).
+    *   **`Subject_XXX_detailed.csv`**: Full temporal data (Start, End, Duration, Coordinates).
+
+## 💡 Analysis Tips
+
+*   **For Strategy Analysis:** Use the `Subject_XXX_detailed.csv`.
+    *   **Duration:** Use this to weight the importance of each fixation.
+    *   **Gaps:** Calculate `StartTime(n+1) - EndTime(n)` to find movement times (Saccades).
+    *   **Dispersion:** High `SD_X/SD_Y` might indicate uncertaintyor complex processing.

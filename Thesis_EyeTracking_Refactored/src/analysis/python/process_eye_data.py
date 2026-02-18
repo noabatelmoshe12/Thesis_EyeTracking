@@ -17,8 +17,11 @@ def process_subjects(source_dir, output_dir, project_root):
 
     print("Starting MATLAB Engine...")
     eng = matlab.engine.start_matlab()
-    eng.addpath(project_root)
-    print("MATLAB Engine started.")
+    # Add the path to the MATLAB source code
+    matlab_src_path = os.path.join(project_root, "src", "analysis", "matlab")
+    eng.addpath(matlab_src_path)
+    eng.addpath(project_root) # Fallback / Original root
+    print(f"MATLAB Engine started. Added path: {matlab_src_path}")
 
     # Find subject files
     # Pattern assumption: Subject_XXX_Results_Decision_Strategy_Experiment.mat
@@ -44,10 +47,10 @@ def process_subjects(source_dir, output_dir, project_root):
                  
             print(f"Processing Subject {subject_code} from {filename}...")
             
-            # Call MATLAB function
-            # Analyze_eye_func(mat, subject_code, output_directory)
+            # Call MATLAB function (v2)
+            # Analyze_eye_func_v2(mat, subject_code, output_directory)
             # matlab.engine requires explicit type conversion often, but strings/ints usually work.
-            eng.Analyze_eye_func(file_path, subject_code, output_dir, nargout=0)
+            eng.Analyze_eye_func_v2(file_path, subject_code, output_dir, nargout=0)
             print(f"Finished Subject {subject_code}.")
             
         except ValueError:

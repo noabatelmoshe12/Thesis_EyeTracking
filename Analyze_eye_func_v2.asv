@@ -1,17 +1,9 @@
 function Analyze_eye_func(mat, subject_code, output_directory)
 %%
-% Update – Analyze_eye v2
-% Date: 17.02.2026
-%
-% The original Analyze_eye code was implemented as a script.
-% It was later converted into a reusable function (Analyze_eye_func).
-%
-% This version is based on that function.
-% The only modification in this update is the addition of exporting
-% an extra table in long format that stores fixation-level data.
-%
-% Analyze_eye_func converts the analysis script into a reusable function.
-%
+Update – Analyze_eye v2
+Date: 17.02.2026
+%%
+% Analyze_eye_func converts the analysis script into a reusable function
 % Input:
 %   mat: path to the .mat file containing edfStruct (or the struct itself)
 %   subject_code: identifier for the subject
