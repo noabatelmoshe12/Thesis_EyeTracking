@@ -50,7 +50,7 @@ def process_subjects(source_dir, output_dir, project_root):
             # Call MATLAB function (v2)
             # Analyze_eye_func_v2(mat, subject_code, output_directory)
             # matlab.engine requires explicit type conversion often, but strings/ints usually work.
-            eng.Analyze_eye_func_v2(file_path, subject_code, output_dir, nargout=0)
+            eng.Analyze_eye_func(file_path, subject_code, output_directory, nargout=0)
             print(f"Finished Subject {subject_code}.")
             
         except ValueError:
