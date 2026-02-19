@@ -60,3 +60,11 @@ Thumbs.db
 # Project specific
 *.EDF
 
+
+# MATLAB Data Files
+*.mat
+*.asv
+*.slxc
+
+# Analysis Output
+*.csv
