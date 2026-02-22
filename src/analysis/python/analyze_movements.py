@@ -2,7 +2,7 @@ import pandas as pd
 import re
 import os
 
-def analyze_scanpath(participant_id, csv_path, trial_order=None, block_order=None):
+def process_fixations_to_movements(participant_id, csv_path, trial_order=None, block_order=None):
     """
     Parses the fixation CSV and returns a long-format DataFrame of movements.
     

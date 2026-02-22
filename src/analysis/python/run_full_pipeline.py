@@ -19,7 +19,7 @@ except ImportError:
 # Add current directory to path to import local modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 try:
-    from analyze_movements import analyze_scanpath, calculate_indices
+    from analyze_movements import process_fixations_to_movements, calculate_indices
 except ImportError:
     # If running from root, might need adjustment, but script location + sys.path append should work
     print("Warning: Could not import 'analyze_movements'. Final aggregation might fail.")
@@ -116,8 +116,8 @@ def run_full_pipeline():
              continue
 
         try:
-            # Use analyze_scanpath from local module
-            df = analyze_scanpath(subject_id, csv_path)
+            # Use process_fixations_to_movements from local module
+            df = process_fixations_to_movements(subject_id, csv_path)
             if not df.empty:
                 all_movements.append(df)
         except Exception as e:

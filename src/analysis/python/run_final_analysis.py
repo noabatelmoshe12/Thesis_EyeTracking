@@ -1,7 +1,7 @@
 import os
 import glob
 import pandas as pd
-from analyze_movements import analyze_scanpath, calculate_indices
+from analyze_movements import process_fixations_to_movements, calculate_indices
 
 def main():
     # Configuration
@@ -26,7 +26,7 @@ def main():
         
         # Parse fixations and classify movements
         # Assuming 2 blocks of 8 trials or similar default; script handles defaults.
-        movements_df = analyze_scanpath(subject_id, csv_path)
+        movements_df = process_fixations_to_movements(subject_id, csv_path)
         
         if not movements_df.empty:
             all_movements.append(movements_df)
