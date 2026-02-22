@@ -98,7 +98,8 @@ def run_full_pipeline():
     # --- 4. Final Aggregation (CSV -> Summary) ---
     print("\n[Step 3/3] Aggregating Results (CSV -> Summary)...")
     
-    csv_files = glob.glob(os.path.join(results_dir, "*.csv"))
+    fixations_dir = os.path.join(processed_dir, "fixations")
+    csv_files = glob.glob(os.path.join(fixations_dir, "*.csv"))
     # Filter out empty files or non-subject files
     csv_files = [f for f in csv_files if os.path.getsize(f) > 0]
     
