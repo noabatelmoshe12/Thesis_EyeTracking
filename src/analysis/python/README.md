@@ -29,7 +29,7 @@ This project automates the processing of MATLAB Eye Tracking data and performs s
 ## Usage
 
 ### 1. Automation (`process_eye_data.py`)
-Iterates over subject `.mat` files in `../Eyedata`, calls `Analyze_eye_func.m`, and generates CSV files in `../function`.
+Iterates over subject `.mat` files in `../Eyedata`, calls `Convert_eye_data.m`, and generates CSV files in `../function`.
 ```bash
 python process_eye_data.py
 ```

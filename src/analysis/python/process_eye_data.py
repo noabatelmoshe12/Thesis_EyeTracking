@@ -1,3 +1,7 @@
+# NOTE (Feb 2026):
+# MATLAB function Analyze_eye_func_v2 was renamed to Convert_eye_data.
+# The pipeline now expects Convert_eye_data.m to be available on the MATLAB path.
+
 import os
 import glob
 try:
@@ -47,10 +51,10 @@ def process_subjects(source_dir, output_dir, project_root):
                  
             print(f"Processing Subject {subject_code} from {filename}...")
             
-            # Call MATLAB function (v2)
-            # Analyze_eye_func_v2(mat, subject_code, output_directory)
+            # Call MATLAB function
+            # Convert_eye_data(mat, subject_code, output_dir)
             # matlab.engine requires explicit type conversion often, but strings/ints usually work.
-            eng.Analyze_eye_func(file_path, subject_code, output_directory, nargout=0)
+            eng.Convert_eye_data(file_path, subject_code, output_dir, nargout=0)
             print(f"Finished Subject {subject_code}.")
             
         except ValueError:
@@ -72,7 +76,7 @@ if __name__ == "__main__":
     # Input: Processed MAT files
     source_dir = os.path.join(project_root, "data", "processed")
     
-    # Output: Project Root (Analyze_eye_func handles subdirs 'data/results' and 'data/results_longformat')
+    # Output: Project Root (Convert_eye_data handles subdirs 'data/results' and 'data/results_longformat')
     output_dir = project_root
     
     print(f"Project Root: {project_root}")

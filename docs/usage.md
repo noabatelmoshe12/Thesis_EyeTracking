@@ -18,7 +18,7 @@ I have created a single script to run the entire analysis pipeline (Conversion -
 **What this script does:**
 1.  **Converts Data**: Checks `data/raw` for `.EDF` files. If they haven't been processed, it attempts to convert them to `.mat` using MATLAB (`edfmex`).
     - *Note: This requires `edfmex` to be installed and accessible in your MATLAB environment.*
-2.  **Analyzes Fixations**: Runs `Analyze_eye_func.m` on all `.mat` files in `data/processed/`.
+2.  **Analyzes Fixations**: Runs `Convert_eye_data.m` on all `.mat` files in `data/processed/`.
     - Generates sequences in `data/results/`.
     - Generates detailed data in `data/results_longformat/`.
 3.  **Aggregates Results**: Reads all sequences and calculates the Horizontal/Vertical search strategies.
@@ -52,3 +52,8 @@ python src/analysis/python/process_eye_data.py
 - **MATLAB Engine**: Ensure you have the MATLAB Engine for Python installed.
 - **Paths**: The scripts use relative paths. Ensure you run them from their respective directories or adjust the working directory.
 - **edfmex**: If conversion fails, ensure `edfmex` is in your MATLAB path or convert files manually.
+
+
+
+Note:
+As of Feb 2026, the MATLAB conversion step uses Convert_eye_data.m instead of Analyze_eye_func_v2.m.

@@ -1,3 +1,7 @@
+# NOTE (Feb 2026):
+# MATLAB function Analyze_eye_func_v2 was renamed to Convert_eye_data.
+# The pipeline now expects Convert_eye_data.m to be available on the MATLAB path.
+
 import os
 import glob
 import sys
@@ -55,9 +59,9 @@ def run_full_pipeline():
 
         if eng:
             try:
-                # Call Analyze_eye_func
-                # Analyze_eye_func(mat_path, subject_code, project_root)
-                eng.Analyze_eye_func(mat_path, subject_code, project_root, nargout=0)
+                # Call Convert_eye_data
+                # Convert_eye_data(mat_path, subject_code, project_root)
+                eng.Convert_eye_data(mat_path, subject_code, project_root, nargout=0)
                 print(f"  Done.")
             except Exception as e:
                 print(f"  Analysis failed for {subject_code}: {e}")
@@ -71,7 +75,7 @@ def run_full_pipeline():
         print("\n[Step 2/3 Alternative] Running Fixation Analysis via MATLAB CLI...")
         print("  Can't open MATLAB Engine, calling 'matlab -batch run_batch_analysis'...")
         
-        # Change to script directory so it uses the correct Analyze_eye_func
+        # Change to script directory so it uses the correct Convert_eye_data
         # We use -sd (Startup Directory)
         
         matlab_script_folder = os.path.join(project_root, "src", "analysis", "matlab")

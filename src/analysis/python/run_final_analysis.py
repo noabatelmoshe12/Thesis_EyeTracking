@@ -9,7 +9,7 @@ def main():
     csv_dir = os.path.join(project_root, "function")
     output_file = os.path.join(project_root, "final_results.csv")
     
-    # Find all CSV files produced by Analyze_eye_func
+    # Find all CSV files produced by Convert_eye_data
     csv_files = glob.glob(os.path.join(csv_dir, "*.csv"))
     
     if not csv_files:

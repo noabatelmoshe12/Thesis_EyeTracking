@@ -1,5 +1,5 @@
 % Batch Analysis Script
-% This script runs Analyze_eye_func on all files in data/processed without needing Python loop
+% This script runs Convert_eye_data on all files in data/processed without needing Python loop
 % Usage: matlab -batch "run_batch_analysis"
 
 % Determine paths
@@ -47,8 +47,8 @@ else
         
         try
             % Call analysis function
-            % Analyze_eye_func(mat_path, subject_code, output_dir)
-            Analyze_eye_func(full_path, subject_code, project_root);
+            % Convert_eye_data(mat_path, subject_code, output_dir)
+            Convert_eye_data(full_path, subject_code, project_root);
         catch ME
             fprintf('Error processing %s: %s\n', filename, ME.message);
         end

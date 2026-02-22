@@ -134,3 +134,7 @@ graph TD
     I -.->|Returns| J[trialResults Variable]
     end
 ```
+
+
+Note:
+As of Feb 2026, the MATLAB conversion step uses Convert_eye_data.m instead of Analyze_eye_func_v2.m.

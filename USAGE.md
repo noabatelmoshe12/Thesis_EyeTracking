@@ -25,7 +25,7 @@ uv run python_processing/process_eye_data.py
 
 **What this does:**
 1.  Starts the MATLAB Engine in the background.
-2.  Connects to your `Analyze_eye_func.m` script.
+2.  Connects to your `Convert_eye_data.m` script.
 3.  Converts `.mat` files to CSVs in the `function/` folder.
 
 ## 3. Running  Analysis (Classification)
@@ -67,3 +67,7 @@ uv run jupyter notebook python_processing/validation.ipynb
 | **Final Analysis** | `uv run python_processing/run_final_analysis.py` |
 | **Open Notebook**| `uv run jupyter notebook` |
 | **Check Python** | `uv run python --version` |
+
+
+Note:
+As of Feb 2026, the MATLAB conversion step uses Convert_eye_data.m instead of Analyze_eye_func_v2.m.

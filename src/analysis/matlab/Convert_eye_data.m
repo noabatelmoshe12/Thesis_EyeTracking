@@ -1,21 +1,22 @@
-function Analyze_eye_func_v2(mat, subject_code, output_directory)
+function Convert_eye_data(mat, subject_code, output_directory)
 %%
-% Update – Analyze_eye v2
-% Date: 17.02.2026
+% Update – Analyze_eye v2 -> renamed to Convert_eye_data
+% Date: 22.02.2026
 %
-% The original Analyze_eye code was implemented as a script.
-% It was later converted into a reusable function (Analyze_eye_func).
+% The original Analyze_eye code was first implemented as a script.
+% It was later converted into a reusable function (Analyze_eye_func)
+% to allow processing multiple subjects in a structured pipeline.
 %
-% This version is based on that function.
-% The only modification in this update is the addition of exporting
-% an extra table in long format that stores fixation-level data.
+% A second update added the export of a detailed fixation-level table
+% in long format, containing temporal and spatial metrics for each fixation.
 %
-% Analyze_eye_func converts the analysis script into a reusable function.
+% In the current update, the function was renamed to Convert_eye_data
+% to better reflect its role in the pipeline: converting raw eye-tracking
+% data into structured analysis-ready tables.
 %
-%% Note:
-% The simple CSV output (AOI sequence only) is currently disabled.
-% The function now exports a single detailed CSV file containing fixation-level
-% temporal and spatial metrics, which are required for the current analysis.
+% The simple AOI-sequence CSV output is intentionally disabled.
+% The function now produces a single detailed CSV file, which is the
+% required format for the current analysis workflow.
 %
 % Input:
 %   mat: path to the .mat file containing edfStruct (or the struct itself)

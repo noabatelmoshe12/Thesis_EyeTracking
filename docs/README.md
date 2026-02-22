@@ -17,3 +17,8 @@ This repository contains the experiment code and analysis pipeline for the "Vari
 
 1.  Install dependencies: `uv sync`
 2.  Run analysis: `uv run python_processing/process_eye_data.py`
+
+
+
+Note:
+As of Feb 2026, the MATLAB conversion step uses Convert_eye_data.m instead of Analyze_eye_func_v2.m.
