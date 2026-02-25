@@ -55,18 +55,35 @@ def run_full_pipeline():
         eng.addpath(matlab_script_dir, nargout=0)
         print("MATLAB Engine started.")
 
-    # ... (conversion step - unchanged) ...
+    # Iterate over raw .mat files
+    pattern = os.path.join(raw_dir, "Subject_*_eyeData.mat")
+    mat_files = glob.glob(pattern)
+    print(f"Found {len(mat_files)} subject .mat files to process.")
 
-        if eng:
-            try:
-                # Call Convert_eye_data
-                # Convert_eye_data(mat_path, subject_code, project_root)
-                eng.Convert_eye_data(mat_path, subject_code, project_root, nargout=0)
-                print(f"  Done.")
-            except Exception as e:
-                print(f"  Analysis failed for {subject_code}: {e}")
-        else:
-             print("  Skipping analysis (No MATLAB Engine).")
+    for mat_path in mat_files:
+        filename = os.path.basename(mat_path)
+        try:
+            parts = filename.split('_')
+            subject_idx = parts.index("Subject") + 1
+            subject_code = parts[subject_idx]
+            
+            if not subject_code.isdigit():
+                 print(f"  Skipping {filename}: Could not parse subject code.")
+                 continue
+                 
+            print(f"Processing Subject {subject_code}...")
+            
+            if eng:
+                try:
+                    eng.Convert_eye_data(mat_path, subject_code, project_root, nargout=0)
+                    print(f"  Done.")
+                except Exception as e:
+                    print(f"  Analysis failed for {subject_code}: {e}")
+            else:
+                 print("  Skipping analysis (No MATLAB Engine).")
+                 
+        except ValueError:
+            print(f"  Skipping {filename}: format mismatch.")
 
     if eng:
         eng.quit()
