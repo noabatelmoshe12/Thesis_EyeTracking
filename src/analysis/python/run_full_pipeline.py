@@ -1,6 +1,30 @@
-# NOTE (Feb 2026):
-# MATLAB function Analyze_eye_func_v2 was renamed to Convert_eye_data.
-# The pipeline now expects Convert_eye_data.m to be available on the MATLAB path.
+"""
+Thesis Eye Tracking Data Pipeline
+
+This module serves as the primary entry point and orchestrator for the entire eye-tracking
+analysis workflow. It manages the transition of raw data through various processing steps 
+to produce the final aggregated scanpath metrics.
+
+Workflow Steps:
+    1. Directory Initialization: Dynamically determines project paths and ensures all 
+       required input/output directories ('raw', 'processed', 'results') exist.
+    2. Data Extraction (MATLAB): Iterates over raw '.mat' files and utilizes the MATLAB 
+       Engine API (or falls back to CLI) to invoke 'Convert_eye_data.m'. This converts 
+       the proprietary eye-tracking data structures into standardized, long-format CSVs.
+    3. Python Analysis & Aggregation: Reads the generated CSVs, groups fixations into 
+       meaningful visual field movements using `process_fixations_to_movements`, and 
+       calculates final analytical indices.
+    4. Result Export: Concatenates all subject data and exports the final summary to 
+       'final_results_summary.csv'.
+
+Requirements:
+    - MATLAB Engine API (`matlab.engine`) or system accessible `matlab` command.
+    - Local module `analyze_movements` for final scanpath calculations.
+
+Historical Notes:
+    - Modified in Feb 2026: The core MATLAB processing script `Analyze_eye_func_v2` 
+      was refactored and renamed to `Convert_eye_data`.
+"""
 
 import os
 import glob
@@ -25,7 +49,15 @@ except ImportError:
     print("Warning: Could not import 'analyze_movements'. Final aggregation might fail.")
 
 def run_full_pipeline():
-    # --- 1. Setup Paths ---
+    """
+    Main execution function for the eye-tracking pipeline.
+    
+    This function handles the sequential execution of environment validation, 
+    raw data parsing via MATLAB, and feature extraction via Python. It is designed 
+    to be robust, handling missing subjects or failing blocks gracefully.
+    """
+    # --- STEP 1: Define Environment and Setup Paths ---
+    # Dynamically locate the project root by assuming the standard folder layout.
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.abspath(os.path.join(script_dir, "..", "..", ".."))
     
@@ -45,7 +77,8 @@ def run_full_pipeline():
             os.makedirs(d)
             print(f"Created directory: {d}")
 
-    # Start MATLAB Engine
+    # --- STEP 2: Initialize MATLAB Interface ---
+    # We prioritize the native `matlab.engine` for performance and deep integration.
     eng = None
     if matlab:
         print("Starting MATLAB Engine...")
@@ -55,7 +88,8 @@ def run_full_pipeline():
         eng.addpath(matlab_script_dir, nargout=0)
         print("MATLAB Engine started.")
 
-    # Iterate over raw .mat files
+    # --- STEP 3: Process Raw Datasets ---
+    # Scan the 'data/raw' directory for standard Subject files to pass to MATLAB.
     pattern = os.path.join(raw_dir, "Subject_*_eyeData.mat")
     mat_files = glob.glob(pattern)
     print(f"Found {len(mat_files)} subject .mat files to process.")
@@ -88,7 +122,8 @@ def run_full_pipeline():
     if eng:
         eng.quit()
     elif shutil.which("matlab"):
-        # Fallback to subprocess if MATLAB command is available but Engine isn't
+        # --- Fallback for MATLAB Processing ---
+        # If the python-matlab Engine failed, attempt 'subprocess' CLI execution.
         print("\n[Step 2/3 Alternative] Running Fixation Analysis via MATLAB CLI...")
         print("  Can't open MATLAB Engine, calling 'matlab -batch run_batch_analysis'...")
         
@@ -112,7 +147,8 @@ def run_full_pipeline():
     else:
         print("  Matlab Engine not found AND 'matlab' command not found. Skipping analysis.")
 
-    # --- 4. Final Aggregation (CSV -> Summary) ---
+    # --- STEP 4: Aggregate Results and Compute Indices ---
+    # Collect all processed CSV fixation datasets and transform them into semantic movements.
     print("\n[Step 3/3] Aggregating Results (CSV -> Summary)...")
     
     fixations_dir = os.path.join(processed_dir, "fixations")
@@ -142,6 +178,8 @@ def run_full_pipeline():
         except Exception as e:
             print(f"  Error aggregating {subject_id}: {e}")
 
+    # --- STEP 5: Final Serialization ---
+    # Compute the final scanpath index on the aggregated movements and save it.
     if all_movements:
         total_movements = pd.concat(all_movements, ignore_index=True)
         trial_results, block_results = calculate_scanpath_index(total_movements)
