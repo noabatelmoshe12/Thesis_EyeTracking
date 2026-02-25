@@ -19,7 +19,7 @@ except ImportError:
 # Add current directory to path to import local modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 try:
-    from analyze_movements import process_fixations_to_movements, calculate_indices
+    from analyze_movements import process_fixations_to_movements, calculate_scanpath_index
 except ImportError:
     # If running from root, might need adjustment, but script location + sys.path append should work
     print("Warning: Could not import 'analyze_movements'. Final aggregation might fail.")
@@ -104,7 +104,7 @@ def run_full_pipeline():
     csv_files = [f for f in csv_files if os.path.getsize(f) > 0]
     
     if not csv_files:
-        print(f"No result CSVs found in {results_dir}.")
+        print(f"No result CSVs found in {fixations_dir}.")
         return
 
     all_movements = []
@@ -113,12 +113,13 @@ def run_full_pipeline():
         subject_id = os.path.splitext(filename)[0]
         
         # Skip if not a subject file (heuristic)
+        subject_id = subject_id.replace("_detailed", "")
         if not subject_id[0].isdigit():
              continue
 
         try:
             # Use process_fixations_to_movements from local module
-            df = process_fixations_to_movements(subject_id, csv_path)
+            trial_idx, block_idx, df = process_fixations_to_movements(subject_id, csv_path)
             if not df.empty:
                 all_movements.append(df)
         except Exception as e:
@@ -126,13 +127,13 @@ def run_full_pipeline():
 
     if all_movements:
         total_movements = pd.concat(all_movements, ignore_index=True)
-        results = calculate_indices(total_movements)
+        trial_results, block_results = calculate_scanpath_index(total_movements)
         
-        results.to_csv(final_results_file, index=False)
+        block_results.to_csv(final_results_file, index=False)
         print(f"\nPipeline Complete!")
         print(f"Final summary saved to: {final_results_file}")
         print("\nPreview:")
-        print(results.head())
+        print(block_results.head())
     else:
         print("No valid movement data found to aggregate.")
 

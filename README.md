@@ -2,70 +2,78 @@
 
 This project implements a **Variable Attribute Decision-Making Task** using Psychtoolbox and EyeLink, followed by a comprehensive data analysis pipeline that combines MATLAB and Python.
 
-##  Quick Start
+## 📁 Directory Structure
 
-### Prerequisites
-1.  **Python**: Managed via `uv`.
-2.  **MATLAB**: Required for experiment execution and raw data processing.
-    - **Psychtoolbox**: Must be installed for the experiment.
-    - **MATLAB Engine API for Python**: Required for the analysis pipeline (`matlab.engine`).
-
-### Installation
-
-To set up the Python environment with all dependencies:
-
-```powershell
-uv sync
+```text
+Thesis_EyeTracking/
++-- src/
+|   +-- experiment/               # MATLAB code for the decision-making task (DM_main_noa.m)
+|   +-- analysis/
+|       +-- matlab/               # Core MATLAB analysis functions (Convert_eye_data.m)
+|       +-- python/               # Automation scripts (run_full_pipeline.py, analyze_movements.py)
++-- data/                         # Data storage (ignored by Git)
+|   +-- raw/                      # Raw eye-tracking and behavioral Results .mat files
+|   +-- processed/
+|       +-- fixations/            # Detailed fixation sequences (.csv)
+|       +-- movements/            # Trial-by-trial movement logs (H/V/Ignored transitions) (.csv)
+|   +-- final_results_summary.csv # Final aggregated Scanpath Index metrics
++-- .venv/                        # Python virtual environment
++-- uv.lock, pyproject.toml       # Python package configuration
 ```
 
-### Running the Analysis
+## 🛠️ Installation & Setup
 
-To run the complete analysis pipeline (Data Conversion -> Feature Extraction -> Strategy Classification):
+1. **Python Setup**: This project uses `uv` for lightning-fast dependency management. From the project root, simply run:
+   ```powershell
+   uv sync
+   ```
+   This will create a `.venv` virtual environment and install all required libraries (e.g., `pandas`).
+
+2. **MATLAB Engine Setup**: The Python pipeline relies on MATLAB Engine to process raw eye-tracking data. Ensure you have MATLAB installed (e.g., R2024b) and install the python engine API. E.g.:
+   ```powershell
+   cd "C:\Program Files\MATLAB\R2024b\extern\engines\python"
+   uv pip install .
+   ```
+
+## 🏗️ Architecture & Data Flow (Pipeline)
+
+This project tracks the complete lifecycle from the live experiment to final classification logic:
+
+### 1. Data Collection (Experiment)
+* **Script**: `src/experiment/DM_main_noa.m`
+* **Action**: Runs the decision-making task in Psychtoolbox. Records eye position and user selections, and saves the data directly into `.mat` format.
+* **Outputs**: `data/raw/` contains the raw eye-tracking and behavioral `.mat` files (`Subject_[ID]_eyeData.mat` and `Subject_[ID]_Results_Decision_Strategy_Experiment.mat`).
+
+### 2. Feature Extraction (MATLAB)
+* **Script**: `src/analysis/matlab/Convert_eye_data.m`
+* **Action**: Maps raw gaze coordinates to experiment Areas of Interest (AOIs) like the Header, Attributes, and Alternatives.
+* **Output**: `data/processed/fixations/[ID]_detailed.csv` (contains a chronological sequence of AOI labels and exact fixation timings per trial).
+
+### 3. Transition Analysis & Strategy Classification (Python)
+* **Script**: `src/analysis/python/analyze_movements.py`
+* **Action**: Reads the fixation sequences and bridges missing data (`NaN`s / blinks). It classifies direct ocular transitions as:
+  - **Horizontal**: Comparing different alternatives on the same attribute (e.g., from `A1` to `B1`).
+  - **Vertical**: Comparing different attributes within the same alternative (e.g., from `A1` to `A2`).
+  - **Ignored**: Invalid or diagonal moves.
+* **Outputs**:
+  - Detailed trial transitions: `data/processed/movements/[ID]_movements.csv` (includes classification, `movement_time_ms`, and skipped NaN counts).
+  - **Final Strategy Metrics**: Calculates the Scanpath Index (**H / (H + V)**) aggregated per trial and per block in `data/final_results_summary.csv`.
+
+## 🚀 Usage Guide (How to Run)
+
+To run the complete analysis, from Feature Extraction to final Scanpath Strategy Classification, execute:
 
 ```powershell
 uv run src/analysis/python/run_full_pipeline.py
 ```
 
-This single command will:
-1.  **Convert** raw `.EDF` files to `.mat` format.
-2.  **Process** gaze data to identify fixations on specific Areas of Interest (AOIs).
-3.  **Analyze** scanpaths to classify decision-making strategies (Attribute-based vs. Alternative-based).
-4.  **Output** final results to `data/final_results_summary.csv`.
+**What this does under the hood:**
+1. Starts the MATLAB Engine to run `Convert_eye_data`.
+2. Processes all new unprocessed `.mat` files into fixation `.csv`s.
+3. Automatically triggers `analyze_movements.py` to classify all scanpath transitions for each subject.
+4. Aggregates and updates `data/final_results_summary.csv` with the newly calculated `Scanpath_Index` scores for statistical analysis.
 
----
+## ❓ Troubleshooting
 
-## 📂 Project Structure
-
-The project is organized as follows:
-
--   **`src/`**: Source code for the project.
-    -   `experiment/`: MATLAB code for the decision-making task (`DM_main_noa.m`).
-    -   `analysis/`:
-        -   `matlab/`: Core analysis functions (`Convert_eye_data.m`).
-        -   `python/`: Automation scripts and higher-level analysis (`run_full_pipeline.py`, `analyze_movements.py`).
--   **`data/`**: Data storage (ignored by git).
-    -   `raw/`: Raw `.EDF` files from the EyeLink.
-    -   `processed/`: Converted `.mat` files and intermediate CSVs.
-    -   `results/`: Final output files.
--   **`docs/`**: Detailed documentation.
--   **`archive/`**: Old project files and previous versions (kept for reference).
-
----
-
-## 📚 Documentation
-
-For more detailed information, please refer to the documentation in the `docs/` folder:
-
--   **[📖 Usage Guide](docs/usage_guide.md)**: Detailed instructions on running experiments, manual data processing, and troubleshooting.
--   **[🏗️ Architecture Overview](docs/architecture.md)**: In-depth explanation of the system design, data flow, and key algorithms.
-
-
-
-Pipeline Update – Feb 2026
-
-The MATLAB function previously named `Analyze_eye_func_v2` has been renamed to `Convert_eye_data`.
-
-The function's role remains the same: converting processed eye-tracking data into analysis-ready fixation tables.
-However, the simple AOI-sequence CSV output has been disabled, and the function now produces only a detailed fixation-level CSV file.
-
-All scripts that previously called `Analyze_eye_func_v2` should now call `Convert_eye_data`.
+- **`No module named 'matlab'`**: You must install the MATLAB engine API as shown in the Installation step. Ensure the engine installed matches your installed MATLAB version.
+- **Path Issues / File Not Found**: Always execute `uv run` commands from the **root** folder (`Thesis_EyeTracking`).
