@@ -184,11 +184,11 @@ def run_full_pipeline():
         total_movements = pd.concat(all_movements, ignore_index=True)
         trial_results, block_results = calculate_scanpath_index(total_movements)
         
-        block_results.to_csv(final_results_file, index=False)
+        block_results.to_csv(final_results_file, index=False, na_rep='NaN')
         print(f"\nPipeline Complete!")
         print(f"Final summary saved to: {final_results_file}")
         print("\nPreview:")
-        print(block_results.head())
+        print(block_results.to_string())
     else:
         print("No valid movement data found to aggregate.")
 

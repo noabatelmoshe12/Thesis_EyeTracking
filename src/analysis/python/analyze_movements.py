@@ -161,6 +161,22 @@ def process_fixations_to_movements(participant_id, csv_path):
             last_valid_pos = t_raw
             skipped_nan = 0
             move_index += 1
+            
+        # Ensure the Trial/Block doesn't disappear from our data if it had 0 matching pairs
+        if move_index == 1:
+            movements.append({
+                "Subject": participant_id,
+                "Block": block_num,
+                "Trial": trial_num,
+                "Move_Index": 0,
+                "From_AOI_Raw": None,
+                "To_AOI_Raw": None,
+                "Classification": "None",
+                "From_Pos_Raw": None,
+                "To_Pos_Raw": None,
+                "movement_time_ms": None,
+                "Skipped_NaN_Count": skipped_nan
+            })
 
     result_df = pd.DataFrame(movements)
     if result_df.empty:
@@ -203,40 +219,62 @@ def calculate_scanpath_index(movements_df):
     if movements_df.empty:
         return pd.DataFrame(), pd.DataFrame()
         
+    # Create base dataframes representing all unique Subjects, Blocks, and Trials in the input.
+    base_trials = movements_df[['Subject', 'Block', 'Trial']].drop_duplicates()
+    base_blocks = movements_df[['Subject', 'Block']].drop_duplicates()
+
     # Isolate only the relevant classifications
     hv_df = movements_df[movements_df['Classification'].isin(['Horizontal', 'Vertical'])]
     
     # TRIAL-LEVEL (Step 4)
     if hv_df.empty:
-        trial_df = pd.DataFrame(columns=['Subject', 'Block', 'Trial', 'ScanIndex_trial'])
-        block_df = pd.DataFrame(columns=['Subject', 'Block', 'ScanIndex_block'])
+        trial_df = base_trials.copy()
+        trial_df['ScanIndex_trial'] = np.nan
+        block_df = base_blocks.copy()
+        block_df['ScanIndex_block'] = np.nan
         return trial_df, block_df
 
     # Pivot to sum Horizontal and Vertical transitions per trial
     trial_counts = hv_df.groupby(['Subject', 'Block', 'Trial', 'Classification']).size().unstack(fill_value=0)
+    trial_counts = trial_counts.reset_index()
+    
+    # Merge with base_trials to keep trials that had 0 H/V transitions
+    trial_counts = pd.merge(base_trials, trial_counts, on=['Subject', 'Block', 'Trial'], how='left')
+    
     for col in ['Horizontal', 'Vertical']:
         if col not in trial_counts.columns:
             trial_counts[col] = 0
+            
+    trial_counts['Horizontal'] = trial_counts['Horizontal'].fillna(0)
+    trial_counts['Vertical'] = trial_counts['Vertical'].fillna(0)
             
     trial_counts['Total'] = trial_counts['Horizontal'] + trial_counts['Vertical']
     # Calculate Trial Index: H / (H + V) -- guard against div by 0
     trial_counts['ScanIndex_trial'] = trial_counts.apply(
         lambda r: r['Horizontal'] / r['Total'] if r['Total'] > 0 else np.nan, axis=1)
         
-    trial_df = trial_counts.reset_index()
+    trial_df = trial_counts
 
     # BLOCK-LEVEL (Step 5)
     # Pivot to sum Horizontal and Vertical transitions across the entire block
     block_counts = hv_df.groupby(['Subject', 'Block', 'Classification']).size().unstack(fill_value=0)
+    block_counts = block_counts.reset_index()
+    
+    # Merge with base_blocks to keep blocks that had 0 H/V transitions
+    block_counts = pd.merge(base_blocks, block_counts, on=['Subject', 'Block'], how='left')
+    
     for col in ['Horizontal', 'Vertical']:
         if col not in block_counts.columns:
             block_counts[col] = 0
+            
+    block_counts['Horizontal'] = block_counts['Horizontal'].fillna(0)
+    block_counts['Vertical'] = block_counts['Vertical'].fillna(0)
             
     block_counts['Total'] = block_counts['Horizontal'] + block_counts['Vertical']
     # Calculate Block Index: H / (H + V) -- guard against div by 0
     block_counts['ScanIndex_block'] = block_counts.apply(
         lambda r: r['Horizontal'] / r['Total'] if r['Total'] > 0 else np.nan, axis=1)
         
-    block_df = block_counts.reset_index()
+    block_df = block_counts
 
     return trial_df, block_df
