@@ -247,7 +247,7 @@ function Convert_eye_data(mat, subject_code, output_directory)
     end
     
     % Prepare output directory
-    target_dir = fullfile(output_directory, 'function');
+    target_dir = fullfile(output_directory, 'data', 'processed', 'fixations');
     if ~exist(target_dir, 'dir')
         mkdir(target_dir);
     end
