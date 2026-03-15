@@ -69,5 +69,3 @@ Thumbs.db
 # Analysis Output
 *.csv
 
-*.tmp.driveupload
-*.tmp.drivedownload
