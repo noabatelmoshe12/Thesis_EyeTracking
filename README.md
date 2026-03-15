@@ -27,13 +27,9 @@ Thesis_EyeTracking/
    ```powershell
    uv sync
    ```
-   This will create a `.venv` virtual environment and install all required libraries (e.g., `pandas`).
+   This will create a `.venv` virtual environment and automatically install all required libraries, including the Python MATLAB Engine.
 
-2. **MATLAB Engine Setup**: The Python pipeline relies on MATLAB Engine to process raw eye-tracking data. Ensure you have MATLAB installed (e.g., R2024b) and install the python engine API. E.g.:
-   ```powershell
-   cd "C:\Program Files\MATLAB\R2024b\extern\engines\python"
-   uv pip install .
-   ```
+2. **MATLAB Installation**: The Python pipeline relies on MATLAB Engine to process raw eye-tracking data. Support for the MATLAB Engine is installed automatically via `uv sync`, but you must ensure you have the actual MATLAB software installed (e.g., R2024b) on your computer.
 
 ## 🏗️ Architecture & Data Flow (Pipeline)
 
@@ -75,5 +71,4 @@ uv run src/analysis/python/run_full_pipeline.py
 
 ## ❓ Troubleshooting
 
-- **`No module named 'matlab'`**: You must install the MATLAB engine API as shown in the Installation step. Ensure the engine installed matches your installed MATLAB version.
 - **Path Issues / File Not Found**: Always execute `uv run` commands from the **root** folder (`Thesis_EyeTracking`).
