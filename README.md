@@ -27,7 +27,10 @@ Thesis_EyeTracking/
    ```powershell
    uv sync
    ```
-   This will create a `.venv` virtual environment and automatically install all required libraries, including the Python MATLAB Engine.
+   This will create a `.venv` virtual environment and automatically install all required libraries, including the Python MATLAB Engine. This means that in this project there is no need for manual dependencies installation (It is already automatic within the uv).
+
+   ```
+
 
 2. **MATLAB Installation**: The Python pipeline relies on MATLAB Engine to process raw eye-tracking data. Support for the MATLAB Engine is installed automatically via `uv sync`, but you must ensure you have the actual MATLAB software installed (e.g., R2024b) on your computer.
 
