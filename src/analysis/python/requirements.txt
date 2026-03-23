@@ -1,3 +1,0 @@
-pandas
-jupyter
-matlabengine==25.1.*

@@ -23,7 +23,7 @@ Thesis_EyeTracking/
 
 ## 🛠️ Installation & Setup
 
-1. **Python Setup**: This project uses `uv` for lightning-fast dependency management. From the project root, simply run:
+1. **Python Setup**: This project uses `uv` for fast and reproducible dependency management. From the project root, simply run:
    ```powershell
    uv sync
    ```
