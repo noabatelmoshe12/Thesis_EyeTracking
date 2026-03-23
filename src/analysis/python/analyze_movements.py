@@ -24,41 +24,85 @@ def parse_aoi(label):
 
 def process_fixations_to_movements(participant_id, csv_path):
     """
-    Reads a long-format fixation CSV and builds a sequence of scanpath movements,
-    handling bridging across missing data (NaNs) and classifying transitions.
+        Reads a long-format fixation CSV and builds a sequence of scanpath movements
+        by examining only consecutive fixation pairs in the original recorded order.
 
-    Inputs:
-    -------
-    participant_id : str
-        The identifier for the subject (e.g., '889'). Used for output tagging.
-    csv_path : str
-        Absolute path to the long-format CSV containing the fixation data.
-        The CSV must contain the following columns:
-        - Block: The block number.
-        - Trial: The trial number.
-        - AOI: The Area of Interest label (e.g., 'A1', 'AT1', 'F', 'NaN').
-        - FixationSeq: A sequential integer indicating temporal order.
+        Movement detection (high-level behaviour)
+        ----------------------------------------
+        1. Consecutive pairs only (no bridging):
+             - For each (Block, Trial), fixations are sorted by FixationSeq.
+             - Only adjacent rows (i, i+1) are considered as a potential movement.
+             - There is no bridging across invalid values. For example, the pattern
+                 AT1 -> NaN -> B1 produces 0 movements, because only the pairs
+                 (AT1, NaN) and (NaN, B1) are checked, and both are invalid.
 
-    Algorithm & Logic:
-    ------------------
-    1. Parse AOIs: Extracts rows and kinds ('A', 'B', 'AT') from raw strings.
-       Invalid labels ('F', 'A' without a number) are grouped as NaN rows.
-    2. Bridge NaNs: Iterates through fixations sequentially. If a NaN or invalid
-       AOI is encountered, it is counted as `Skipped_NaN_Count` but skipped over so 
-       the next valid AOI bridges directly to the last valid AOI in the sequence.
-    3. Classification:
-       - Horizontal: The row indices of the From and To AOIs exactly match.
-       - Vertical: The 'kinds' match between 'A' and 'B', but the rows differ.
-       - Ignored: Diagonal jumps, undefined rows, or moves between attributes (e.g., 'AT1' to 'AT3').
+        2. Valid vs. invalid AOIs:
+             - AOIs are parsed with parse_aoi, which accepts only labels of the form
+                 ATi, Ai, or Bi (e.g., 'AT1', 'A2', 'B3'). These are considered valid AOIs.
+             - Anything else (e.g., 'F', plain 'A' or 'B' with no index, NaN, or any
+                 other string) is treated as invalid and cannot start or end a movement.
 
-    Returns (Tuple):
-    ----------------
-    trial_idx : pd.DataFrame
-        Trial-level scanpath index calculations.
-    block_idx : pd.DataFrame
-        Block-level scanpath index calculations.
-    result_df : pd.DataFrame
-        The full line-by-line movement history output table.
+        3. When is a movement recorded?
+             - A movement is recorded only when ALL of the following hold for the
+                 consecutive pair (row i, row i+1):
+                     * Both AOIs are valid (parse to a row index and kind).
+                     * The raw AOI labels are different (e.g., 'AT1' -> 'B1').
+             - If either AOI is invalid, or the two labels are identical (e.g.,
+                 'AT1' -> 'AT1'), the pair is ignored and NO movement is created.
+             - Ignored pairs do not lead to any later inferred movement; they are
+                 simply skipped.
+
+        4. Classification rules (exactly as implemented):
+             Let row_from_idx, kind_from be the parsed row index and kind for the
+             first AOI in the pair, and row_to_idx, kind_to for the second.
+
+             - Horizontal:
+                     * row_from_idx == row_to_idx (same row index) AND the labels are
+                         different. The AOI kinds may differ.
+                     * Examples: A1 -> B1, AT1 -> B1, A1 -> AT1.
+
+             - Vertical:
+                     * kind_from == kind_to and kind_from is either 'A' or 'B'; AND
+                         row_from_idx != row_to_idx (different rows within the same kind).
+                     * Examples: A1 -> A3, B2 -> B4.
+
+             - Ignored:
+                     * Any other valid pair that is not Horizontal or Vertical.
+                     * Example: A1 -> B2.
+
+             Note: Because identical labels are skipped before classification, a
+             pair like AT1 -> AT1 does not appear in the output at all (it is
+             treated as "no movement").
+
+        Short examples that summarise the logic
+        ---------------------------------------
+        - AT1 -> B1         => Horizontal
+        - A1  -> A3         => Vertical
+        - A1  -> B2         => Ignored
+        - AT1 -> AT1        => no movement recorded
+        - AT1 -> NaN -> B1  => 0 movements, because only consecutive pairs are
+                                                     checked and both contain an invalid AOI.
+
+        Inputs
+        ------
+        participant_id : str
+                The identifier for the subject (e.g., '889'). Used for output tagging.
+        csv_path : str
+                Absolute path to the long-format CSV containing the fixation data.
+                The CSV must contain the following columns:
+                - Block: The block number.
+                - Trial: The trial number.
+                - AOI: The Area of Interest label (e.g., 'A1', 'AT1', 'F', 'NaN').
+                - FixationSeq: A sequential integer indicating temporal order.
+
+        Returns
+        -------
+        trial_idx : pd.DataFrame
+                Trial-level scanpath index calculations.
+        block_idx : pd.DataFrame
+                Block-level scanpath index calculations.
+        result_df : pd.DataFrame
+                The full line-by-line movement history output table.
     """
     if not os.path.exists(csv_path):
         print(f"File not found: {csv_path}")
@@ -77,60 +121,58 @@ def process_fixations_to_movements(participant_id, csv_path):
 
     movements = []
 
-    # Step 2: Build Transitions (Bridge across NaNs)
+    # Step 2: Build Transitions (consecutive pairs only, no bridging)
     for (block_num, trial_num), group in df.groupby(['Block', 'Trial']):
         # Ensure fixations are evaluated in their chronological order
-        group = group.sort_values('FixationSeq')
-        
-        last_valid_aoi = None
-        last_valid_pos = None
-        skipped_nan = 0
+        group = group.sort_values('FixationSeq').reset_index(drop=True)
+
         move_index = 1
-        
-        for _, row_data in group.iterrows():
-            aoi_t = row_data['AOI']
-            t_raw = row_data['FixationSeq']
-            time_t = row_data['StartTime_ms']
-            
-            # 1. If AOI_t is NaN, increment bridge counter and continue
-            if pd.isna(aoi_t) or str(aoi_t).strip().lower() == 'nan':
-                skipped_nan += 1
+
+        # Slide over consecutive pairs: row i and row i+1
+        for i in range(len(group) - 1):
+            row_from_data = group.iloc[i]
+            row_to_data = group.iloc[i + 1]
+
+            aoi_from_raw = row_from_data['AOI']
+            aoi_to_raw = row_to_data['AOI']
+
+            # Convert raw AOI values to stripped strings, handle NaN
+            from_label = None if pd.isna(aoi_from_raw) else str(aoi_from_raw).strip()
+            to_label = None if pd.isna(aoi_to_raw) else str(aoi_to_raw).strip()
+
+            # Skip if either is missing/NaN-like
+            if from_label is None or to_label is None:
                 continue
-                
-            aoi_str = str(aoi_t).strip()
-            row_val, kind_val = parse_aoi(aoi_str)
-            
-            # 2. If AOI_t is not a valid AOI with a defined row (e.g. 'F')
-            if pd.isna(row_val) or kind_val is None:
+
+            # Parse into (row_index, kind); invalid labels give (nan, None)
+            row_from_idx, kind_from = parse_aoi(from_label)
+            row_to_idx, kind_to = parse_aoi(to_label)
+
+            # Skip if either AOI is invalid
+            if pd.isna(row_from_idx) or kind_from is None:
                 continue
-                
-            # 3. If lastValidAOI is None, this is the first valid fixation of the trial
-            if last_valid_aoi is None:
-                last_valid_aoi = aoi_str
-                last_valid_pos = t_raw
-                skipped_nan = 0
+            if pd.isna(row_to_idx) or kind_to is None:
                 continue
-                
-            # 4. Create transition (spanning between the bridged fixations)
-            from_aoi = last_valid_aoi
-            to_aoi = aoi_str
-            from_pos_raw = last_valid_pos
-            to_pos_raw = t_raw
-            movement_time = time_t
-            skipped_nan_count = skipped_nan
-            
-            # Step 3: Transition Classification Logic
-            row_from, kind_from = parse_aoi(from_aoi)
-            row_to, kind_to = parse_aoi(to_aoi)
-            
+
+            # Skip if the AOI labels are identical (no movement)
+            if from_label == to_label:
+                continue
+
+            # Classification logic
             classification = "Ignored"
-            # Horizontal: Same row (implying scanning across attributes)
-            if row_from == row_to and not pd.isna(row_from):
+            if (not pd.isna(row_from_idx)) and (row_from_idx == row_to_idx):
+                # Same row index => Horizontal
                 classification = "Horizontal"
-            # Vertical: Same alternative type ('A' or 'B') but jumping to different rows
-            elif kind_from == kind_to and kind_from in {"A", "B"} and row_from != row_to:
+            elif (kind_from == kind_to) and (kind_from in {"A", "B"}) and (row_from_idx != row_to_idx):
+                # Same kind ('A' with 'A' or 'B' with 'B'), different row => Vertical
                 classification = "Vertical"
-                
+
+            from_pos_raw = row_from_data['FixationSeq']
+            to_pos_raw = row_to_data['FixationSeq']
+            from_start_time = row_from_data['StartTime_ms']
+            to_start_time = row_to_data['StartTime_ms']
+            inter_fixation_interval = to_start_time - from_start_time
+
             movements.append({
                 # 'Subject': The unique identifier for the participant.
                 "Subject": participant_id,
@@ -141,27 +183,25 @@ def process_fixations_to_movements(participant_id, csv_path):
                 # 'Move_Index': A sequential counter for the valid transitions within this specific trial.
                 "Move_Index": move_index,
                 # 'From_AOI_Raw': The AOI label where the movement started.
-                "From_AOI_Raw": from_aoi,
+                "From_AOI_Raw": from_label,
                 # 'To_AOI_Raw': The AOI label where the movement ended.
-                "To_AOI_Raw": to_aoi,
+                "To_AOI_Raw": to_label,
                 # 'Classification': Indicates if the movement was Horizontal, Vertical, or Ignored (diagonal/cross-attribute).
                 "Classification": classification,
                 # 'From_Pos_Raw': The FixationSeq integer showing when the 'From' fixation occurred in the trial.
                 "From_Pos_Raw": from_pos_raw,
                 # 'To_Pos_Raw': The FixationSeq integer showing when the 'To' fixation occurred in the trial.
                 "To_Pos_Raw": to_pos_raw,
-                # 'movement_time_ms': The exact time (StartTime_ms) the participant landed on the destination AOI.
-                "movement_time_ms": movement_time,
-                # 'Skipped_NaN_Count': How many invalid/NaN fixations occurred sequentially between the 'From' and 'To' fixations.
-                "Skipped_NaN_Count": skipped_nan_count
+                # 'From_StartTime_ms': The onset time (StartTime_ms) of the first fixation in the pair.
+                "From_StartTime_ms": from_start_time,
+                # 'To_StartTime_ms': The onset time (StartTime_ms) of the second fixation in the pair.
+                "To_StartTime_ms": to_start_time,
+                # 'InterFixationInterval_ms': Time between fixation onsets (To_StartTime_ms - From_StartTime_ms).
+                "InterFixationInterval_ms": inter_fixation_interval
             })
-            
-            # Update trackers for the next loop iteration
-            last_valid_aoi = aoi_str
-            last_valid_pos = t_raw
-            skipped_nan = 0
+
             move_index += 1
-            
+
         # Ensure the Trial/Block doesn't disappear from our data if it had 0 matching pairs
         if move_index == 1:
             movements.append({
@@ -174,16 +214,18 @@ def process_fixations_to_movements(participant_id, csv_path):
                 "Classification": "None",
                 "From_Pos_Raw": None,
                 "To_Pos_Raw": None,
-                "movement_time_ms": None,
-                "Skipped_NaN_Count": skipped_nan
+                "From_StartTime_ms": None,
+                "To_StartTime_ms": None,
+                "InterFixationInterval_ms": None
             })
 
     result_df = pd.DataFrame(movements)
     if result_df.empty:
         result_df = pd.DataFrame(columns=[
-            "Subject", "Block", "Trial", "Move_Index", 
-            "From_AOI_Raw", "To_AOI_Raw", "Classification", 
-            "From_Pos_Raw", "To_Pos_Raw", "movement_time_ms", "Skipped_NaN_Count"
+            "Subject", "Block", "Trial", "Move_Index",
+            "From_AOI_Raw", "To_AOI_Raw", "Classification",
+            "From_Pos_Raw", "To_Pos_Raw",
+            "From_StartTime_ms", "To_StartTime_ms", "InterFixationInterval_ms"
         ])
 
     # Save to disk
@@ -196,7 +238,7 @@ def process_fixations_to_movements(participant_id, csv_path):
 
     # Step 4 & 5: Calculate statistical indices
     trial_idx, block_idx = calculate_scanpath_index(result_df)
-    
+
     return trial_idx, block_idx, result_df
 
 def calculate_scanpath_index(movements_df):
