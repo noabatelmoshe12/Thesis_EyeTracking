@@ -51,13 +51,21 @@ This project tracks the complete lifecycle from the live experiment to final cla
 
 ### 3. Transition Analysis & Strategy Classification (Python)
 * **Script**: `src/analysis/python/analyze_movements.py`
-* **Action**: Reads the fixation sequences and bridges missing data (`NaN`s / blinks). It classifies direct ocular transitions as:
-  - **Horizontal**: Comparing different alternatives on the same attribute (e.g., from `A1` to `B1`).
-  - **Vertical**: Comparing different attributes within the same alternative (e.g., from `A1` to `A2`).
-  - **Ignored**: Invalid or diagonal moves.
+* **Action**: Reads the fixation sequences and, for each trial, examines **only consecutive fixation pairs** in the original recorded order (FixationSeq i and i+1). There is **no bridging** over invalid AOIs (e.g., NaNs, blinks, or labels that do not match ATi/Ai/Bi), and invalid pairs are simply ignored and never turned into later inferred movements. A movement is recorded only when both AOIs in the consecutive pair are valid (ATi, Ai, or Bi) and their labels differ. Each valid pair is then classified as:
+*  - **Horizontal**: Two **different** valid AOIs with the **same row index**, even if the kinds differ (e.g., `A1 -> B1`, `AT1 -> B1`, `A1 -> AT1`).
+*  - **Vertical**: Same AOI kind **within an alternative** (only `A`→`A` or `B`→`B`) with **different row indices** (e.g., `A1 -> A3`, `B2 -> B4`).
+*  - **Ignored**: Any other valid transition that is neither Horizontal nor Vertical (e.g., `A1 -> B2`).
+
+  Examples that illustrate this logic:
+  - `AT1 -> B1` is classified as **Horizontal**.
+  - `A1 -> A3` is classified as **Vertical**.
+  - `A1 -> B2` is classified as **Ignored**.
+  - `AT1 -> AT1` produces **no movement** (identical AOIs are skipped).
+  - `AT1 -> NaN -> B1` produces **0 movements**, because only the consecutive pairs `(AT1, NaN)` and `(NaN, B1)` are checked, and both involve an invalid AOI.
+
 * **Outputs**:
-  - Detailed trial transitions: `data/processed/movements/[ID]_movements.csv` (includes classification, `movement_time_ms`, and skipped NaN counts).
-  - **Final Strategy Metrics**: Calculates the Scanpath Index (**H / (H + V)**) aggregated per trial and per block in `data/final_results_summary.csv`.
+*  - Detailed trial transitions: `data/processed/movements/[ID]_movements.csv` (one row per recorded movement, including classification, raw AOI labels, fixation order indices, and three timing fields: `From_StartTime_ms`, `To_StartTime_ms`, and `InterFixationInterval_ms = To_StartTime_ms - From_StartTime_ms`).
+*  - **Final Strategy Metrics**: Calculates the Scanpath Index (**H / (H + V)**) aggregated per trial and per block in `data/final_results_summary.csv`.
 
 ##  Usage Guide (How to Run)
 
