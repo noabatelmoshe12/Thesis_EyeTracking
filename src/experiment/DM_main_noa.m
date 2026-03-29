@@ -2,7 +2,7 @@
 % Variable Attribute Decision-Making Task.
 % Presents paired alternative "candidates" (A vs. B) described on
 % 3/4 subjective attributes:
-% block 1 (intelligence, work ethic, easy to work with)
+% block 1 (intelligence, work ethic, easy to work with)qqq
 % block 2 (intelligence, work ethic, easy to work with, creativity).
 % Each attribute has a different importance weight,
 %   influencing the participant's decision-making strategy.
@@ -81,9 +81,9 @@ Screen('TextSize', wPtr, 35);
 
 %% ---------- Experiment parameters ------------------------------
 numOfSets = 2; % 3-attribute and 4-attribute blocks
-numOfTrials = 50; % trials per block = 100
-numOfPractice = 1; % warm-up trials per block = 10
-breakTime = 10; % trials between mandatory breaks = 25
+numOfTrials = 100; % trials per block = 100
+numOfPractice = 10; % warm-up trials per block = 10
+breakTime = 20; % trials between mandatory breaks = 25
 numOfPoints = 0;
 imageDuration = 0.5; % minimum exposure for static images (sec)
 
@@ -318,21 +318,21 @@ end
 %% ---------- Instruction screens --------------------------------
 Screen('FillRect', wPtr, 0); % Black background
 % Instruction 1
-Screen1 = imread('Instruction1.png');
+Screen1 = imread('instructions/Instruction1.png');
 tex1 = Screen('MakeTexture', wPtr, Screen1);
 Screen('DrawTexture', wPtr, tex1);
 Screen('Flip', wPtr);
 KbWait; WaitSecs(imageDuration);
 
 % Instruction 2
-Screen2 = imread('Instruction2.png');
+Screen2 = imread('instructions/Instruction2.png');
 tex2 = Screen('MakeTexture', wPtr, Screen2);
 Screen('DrawTexture', wPtr, tex2);
 Screen('Flip', wPtr);
 KbWait; WaitSecs(imageDuration);
 
 % Instruction 3
-Screen3 = imread('Instruction3.png');
+Screen3 = imread('instructions/Instruction3.png');
 tex3 = Screen('MakeTexture', wPtr, Screen3);
 Screen('DrawTexture', wPtr, tex3);
 Screen('Flip', wPtr);
@@ -355,8 +355,8 @@ for setIdx = 1:numOfSets
     % 1. Show block-specific instructions.
     % ------------------------------------------------------------
     switch setIdx
-        case 1, stoper = 3; instrImg = 'Instruction4.png'; % 3 attributes
-        case 2, stoper = 4; instrImg = 'Instruction5.png'; % 4 attributes
+        case 1, stoper = 3; instrImg = 'instructions/Instruction4.png'; % 3 attributes
+        case 2, stoper = 4; instrImg = 'instructions/Instruction5.png'; % 4 attributes
     end
     
     tex = Screen('MakeTexture', wPtr, imread(instrImg));
@@ -483,7 +483,7 @@ for setIdx = 1:numOfSets
     
     %% ------------------------------------------------------------
     % 3. Transition screen before True trials
-    texPracEnd = Screen('MakeTexture', wPtr, imread('exp.jpg'));
+    texPracEnd = Screen('MakeTexture', wPtr, imread('instructions/exp.jpg'));
     Screen('FillRect', wPtr, 0); % Black background
     Screen('DrawTexture', wPtr, texPracEnd);
     Screen('Flip', wPtr);
@@ -675,7 +675,7 @@ Screen('Flip', wPtr);
         % -------------------- Scheduled break ------------------
         if mod(trial, breakTime)==0 && trial~=numOfTrials
             % No recording during break
-            texBreak = Screen('MakeTexture', wPtr, imread('break.jpg'));
+            texBreak = Screen('MakeTexture', wPtr, imread('instructions/break.jpg'));
             Screen('FillRect', wPtr, 0); % Black background
             Screen('DrawTexture', wPtr, texBreak);
             Screen('Flip', wPtr);
@@ -772,7 +772,7 @@ catch
 end
 
 %% ---------- Goodbye screen -------------------------------------
-texEnd = Screen('MakeTexture', wPtr, imread('end.jpg'));
+texEnd = Screen('MakeTexture', wPtr, imread('instructions/end.jpg'));
 Screen('FillRect', wPtr, 0); % Black background
 Screen('DrawTexture', wPtr, texEnd);
 Screen('Flip', wPtr);
