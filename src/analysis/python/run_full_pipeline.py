@@ -23,7 +23,7 @@ Workflow Steps:
      5. Final Metrics & Export:
          Concatenates all movement data, computes final indices with
          calculate_scanpath_index, and saves block-level summary output to
-         data/final_results_summary.csv.
+         data/block_results_summary.csv.
 
 Requirements:
         - MATLAB Engine API (matlab.engine) or a system-accessible matlab CLI command.
@@ -73,7 +73,8 @@ def run_full_pipeline():
     raw_dir = os.path.join(project_root, "data", "raw")
     processed_dir = os.path.join(project_root, "data", "processed")
     results_dir = os.path.join(project_root, "data", "results")
-    final_results_file = os.path.join(project_root, "data", "final_results_summary.csv")
+    trial_results_file = os.path.join(results_dir, "trial_results_summary.csv")
+    block_results_file = os.path.join(results_dir, "block_results_summary.csv")
     
     matlab_script_dir = os.path.join(project_root, "src", "analysis", "matlab")
     
@@ -192,11 +193,15 @@ def run_full_pipeline():
     if all_movements:
         total_movements = pd.concat(all_movements, ignore_index=True)
         trial_results, block_results = calculate_scanpath_index(total_movements)
-        
-        block_results.to_csv(final_results_file, index=False, na_rep='NaN')
+
+        # Save trial-level and block-level summaries
+        trial_results.to_csv(trial_results_file, index=False, na_rep='NaN')
+        block_results.to_csv(block_results_file, index=False, na_rep='NaN')
+
         print(f"\nPipeline Complete!")
-        print(f"Final summary saved to: {final_results_file}")
-        print("\nPreview:")
+        print(f"Trial summary saved to: {trial_results_file}")
+        print(f"Block summary saved to: {block_results_file}")
+        print("\nBlock-level preview:")
         print(block_results.to_string())
     else:
         print("No valid movement data found to aggregate.")

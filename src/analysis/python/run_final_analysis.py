@@ -7,7 +7,7 @@ def main():
     # Configuration
     project_root = r"c:\Projects\Thesis_EyeTracking"
     csv_dir = os.path.join(project_root, "data", "processed", "fixations")
-    output_file = os.path.join(project_root, "data", "final_results_summary.csv")
+    output_file = os.path.join(project_root, "data", "results", "block_results_summary.csv")
     
     # Find all CSV files produced by Convert_eye_data
     csv_files = glob.glob(os.path.join(csv_dir, "*.csv"))
