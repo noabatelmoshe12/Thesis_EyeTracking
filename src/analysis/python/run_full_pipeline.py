@@ -1,40 +1,49 @@
 """
 Thesis Eye Tracking Data Pipeline
 
-This module serves as the primary entry point and orchestrator for the entire eye-tracking
+This module serves as the *primary entry point* and orchestrator for the entire eye-tracking
 analysis workflow. It manages the transition of raw data through various processing steps 
 to produce the final aggregated scanpath metrics.
 
 Workflow Steps:
-    1. Directory Initialization: Dynamically determines project paths and ensures all 
-       required input/output directories ('raw', 'processed', 'results') exist.
-    2. Data Extraction (MATLAB): Iterates over raw '.mat' files and utilizes the MATLAB 
-       Engine API (or falls back to CLI) to invoke 'Convert_eye_data.m'. This converts 
-       the proprietary eye-tracking data structures into standardized, long-format CSVs.
-    3. Python Analysis & Aggregation: Reads the generated CSVs, groups fixations into 
-       meaningful visual field movements using `process_fixations_to_movements`, and 
-       calculates final analytical indices.
-    4. Result Export: Concatenates all subject data and exports the final summary to 
-       'final_results_summary.csv'.
+     1. Environment & Paths:
+         Resolves the project root from the script location and builds absolute paths for
+         data folders and output files.
+     2. Directory Validation:
+         Ensures required directories exist: data/raw, data/processed, and data/results.
+     3. MATLAB Processing:
+         a) Preferred path: Starts MATLAB Engine, scans Subject_*_eyeData.mat files, and
+             runs Convert_eye_data for each detected subject.
+         b) Fallback path: If engine is unavailable but MATLAB CLI exists, runs
+             matlab -batch run_batch_analysis from the MATLAB scripts directory.
+     4. Python Aggregation:
+         Loads non-empty fixation CSV files from data/processed/fixations, converts each
+         subject's fixations into movement sequences with process_fixations_to_movements,
+         and accumulates valid movement tables.
+     5. Final Metrics & Export:
+         Concatenates all movement data, computes final indices with
+         calculate_scanpath_index, and saves block-level summary output to
+         data/final_results_summary.csv.
 
 Requirements:
-    - MATLAB Engine API (`matlab.engine`) or system accessible `matlab` command.
-    - Local module `analyze_movements` for final scanpath calculations.
+        - MATLAB Engine API (matlab.engine) or a system-accessible matlab CLI command.
+        - Local module analyze_movements that provides:
+            process_fixations_to_movements and calculate_scanpath_index.
 
 Historical Notes:
     - Modified in Feb 2026: The core MATLAB processing script `Analyze_eye_func_v2` 
       was refactored and renamed to `Convert_eye_data`.
 """
 
-import os
-import glob
-import sys
-import shutil
-import pandas as pd
-import time
-import subprocess
+import os  # Path handling, directory checks, and file discovery support.
+import glob  # Finds raw and processed data files using wildcard patterns.
+import sys  # Extends the import path so local analysis modules can be loaded.
+import shutil  # Checks whether the MATLAB CLI is available on the system.
+import pandas as pd  # Combines and exports the aggregated analysis results.
+import time  # Reserved for timing or future pipeline performance measurements.
+import subprocess  # Runs the MATLAB CLI fallback when the engine is unavailable.
 
-try:
+try: # Attempt to load MATLAB Engine
     import matlab.engine
 except ImportError:
     print("Warning: 'matlab.engine' could not be imported. MATLAB steps will be skipped.")
