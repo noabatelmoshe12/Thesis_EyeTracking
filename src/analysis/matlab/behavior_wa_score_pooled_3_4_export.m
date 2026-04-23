@@ -1,7 +1,34 @@
 %% extract data
+% This script is based on the original raw MATLAB file provided by Gal,
+% a PhD student in the lab, for extracting variables from the behavioral data.
+%
+% The original logic was preserved as much as possible.
+% The current version was adapted to compute a single pooled behavioral
+% WA-based relative score across the two experimental blocks together,
+% treating the 3-attribute block and the 4-attribute block as one merged
+% set of 200 trials.
+%
+% Input:
+% - Subject-level MATLAB files in .mat format
+%   (e.g., subject_101_Results_Decision_Strategy_Experiment.mat)
+% - Each file is expected to contain the behavioral Data structure used
+%   in the original script.
+%
+% Output:
+% - A CSV file named behavior_wa_score_relative_pooled_3_4.csv
+% - The output contains subject-level behavioral variables:
+%   subject_id, wa_score_pooled_3_4
+%
+% Purpose:
+% - To extract a single pooled behavioral WA-based relative score for each
+%   subject across Block 3 and Block 4 together, in a format that can be
+%   read easily in Python for downstream correlation analysis with
+%   eye-movement metrics.
+
+
 clear; clc
 a1 = 'subject_'; a2 = '_Results_Decision_Strategy_Experiment.mat';
-numOfSubjects = 39;
+numOfSubjects = 40;
 numOfTrials = 100;
 numOfPractice = 10;
 data_strategy_class_3 = [];

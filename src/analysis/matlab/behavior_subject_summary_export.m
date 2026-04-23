@@ -2,8 +2,11 @@
 %
 % Purpose:
 % Extract subject-level behavioral summary measures from the decision-making task,
-% create a summary table, save it as CSV, and generate two bar plots:
-% one for Block 1 mean RT across subjects and one for Block 2 mean RT across subjects.
+% create a summary table, save it as CSV, and generate four bar plots:
+% one for Block 1 mean RT across subjects,
+% one for Block 2 mean RT across subjects,
+% one for Block 1 accuracy across subjects,
+% and one for Block 2 accuracy across subjects.
 %
 % Input folder:
 % C:\Projects\Thesis_EyeTracking\data\raw
@@ -34,7 +37,7 @@ end
 a1 = 'subject_';   % change to 'Subject_' if needed
 a2 = '_Results_Decision_Strategy_Experiment.mat';
 
-numOfSubjects = 31;
+numOfSubjects = 40;
 firstSubjectID = 101;
 numOfTrialsPerBlock = 100;
 
@@ -321,3 +324,64 @@ saveas(gcf, plot_file_block2);
 
 fprintf('Block 1 plot saved to:\n%s\n', plot_file_block1);
 fprintf('Block 2 plot saved to:\n%s\n', plot_file_block2);
+
+%% bar plot for accuracy per subject - block 1
+valid_idx_acc_block1 = ~isnan(accuracy_block1);
+subjects_acc_block1 = subject_id(valid_idx_acc_block1);
+values_acc_block1 = accuracy_block1(valid_idx_acc_block1);
+flags_acc_block1 = flag_suspect_any(valid_idx_acc_block1);
+
+figure;
+bar(subjects_acc_block1, values_acc_block1);
+hold on;
+yline(mean(values_acc_block1, 'omitnan'), '--', 'Mean', 'LineWidth', 1.5);
+yline(median(values_acc_block1, 'omitnan'), '--', 'Median', 'LineWidth', 1.5);
+
+suspect_subjects_acc_block1 = subjects_acc_block1(flags_acc_block1 == 1);
+suspect_values_acc_block1 = values_acc_block1(flags_acc_block1 == 1);
+if ~isempty(suspect_subjects_acc_block1)
+    scatter(suspect_subjects_acc_block1, suspect_values_acc_block1, 50, 'filled');
+end
+
+title('Accuracy per Subject - Block 1');
+xlabel('Subject ID');
+ylabel('Accuracy');
+ylim([0 1]);
+xticks(subjects_acc_block1);
+xtickangle(45);
+hold off;
+
+plot_file_acc_block1 = fullfile(output_dir, 'accuracy_per_subject_block1.png');
+saveas(gcf, plot_file_acc_block1);
+
+%% bar plot for accuracy per subject - block 2
+valid_idx_acc_block2 = ~isnan(accuracy_block2);
+subjects_acc_block2 = subject_id(valid_idx_acc_block2);
+values_acc_block2 = accuracy_block2(valid_idx_acc_block2);
+flags_acc_block2 = flag_suspect_any(valid_idx_acc_block2);
+
+figure;
+bar(subjects_acc_block2, values_acc_block2);
+hold on;
+yline(mean(values_acc_block2, 'omitnan'), '--', 'Mean', 'LineWidth', 1.5);
+yline(median(values_acc_block2, 'omitnan'), '--', 'Median', 'LineWidth', 1.5);
+
+suspect_subjects_acc_block2 = subjects_acc_block2(flags_acc_block2 == 1);
+suspect_values_acc_block2 = values_acc_block2(flags_acc_block2 == 1);
+if ~isempty(suspect_subjects_acc_block2)
+    scatter(suspect_subjects_acc_block2, suspect_values_acc_block2, 50, 'filled');
+end
+
+title('Accuracy per Subject - Block 2');
+xlabel('Subject ID');
+ylabel('Accuracy');
+ylim([0 1]);
+xticks(subjects_acc_block2);
+xtickangle(45);
+hold off;
+
+plot_file_acc_block2 = fullfile(output_dir, 'accuracy_per_subject_block2.png');
+saveas(gcf, plot_file_acc_block2);
+
+fprintf('Accuracy Block 1 plot saved to:\n%s\n', plot_file_acc_block1);
+fprintf('Accuracy Block 2 plot saved to:\n%s\n', plot_file_acc_block2);

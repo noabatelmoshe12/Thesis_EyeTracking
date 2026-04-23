@@ -26,7 +26,7 @@
 %% extract data
 clear; clc
 a1 = 'subject_'; a2 = '_Results_Decision_Strategy_Experiment.mat';
-numOfSubjects = 39;
+numOfSubjects = 40;
 numOfTrials = 100;
 numOfPractice = 10;
 data_strategy_class_3 = [];
