@@ -11,6 +11,5 @@ dependencies = [
     "jupyter>=1.0.0",
     "matplotlib>=3.10.8",
     "seaborn>=0.13.2",
-    
-
+    "scipy>=1.12.0",
 ]
