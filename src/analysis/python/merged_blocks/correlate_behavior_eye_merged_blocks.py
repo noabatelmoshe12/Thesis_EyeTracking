@@ -201,6 +201,7 @@ def scatter_behavior_vs_vertical(
     plt.xlabel("Behavioral compensatory tendency")
     plt.ylabel("VerticalIndex_subject (higher = more vertical scanning)")
     plt.title("Behavioral tendency vs merged vertical eye-scan index")
+    plt.ylim(0, 1)
 
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
