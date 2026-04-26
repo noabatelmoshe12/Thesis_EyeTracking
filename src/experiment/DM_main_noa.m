@@ -39,6 +39,7 @@ rng('shuffle'); % randomise the seed based on system clock
 % Set up escape key 'q' for emergency exit
 KbName('UnifyKeyNames');
 escapeKey = KbName('q');
+Calibrate = KbName('c');
 
 %% ---------- Collect participant information --------------------
 % Call a custom function that collects and returns a struct with
@@ -372,7 +373,7 @@ for setIdx = 1:numOfSets
         
         % Show fixation cross with eye tracking check
         Eyelink('message','Fix Cross Practice');
-        fixationShown = CheckFixation(wPtr, rect, dummymode, escapeKey, CenterX, CenterY, White);
+        fixationShown = CheckFixation(wPtr, rect, dummymode, escapeKey, CenterX, CenterY, White, Calibrate, el);
         Screen('TextSize', wPtr, 30); % Reset text size
         
         logic = false; % until a valid key is pressed
@@ -443,6 +444,10 @@ for setIdx = 1:numOfSets
                     [~, ~, keyCode] = KbCheck;
                     if keyCode(KbName('space'))
                         break;
+                    elseif keyCode(Calibrate)
+                        if ~dummymode
+                            EyelinkDoTrackerSetup(el);
+                        end
                     elseif keyCode(escapeKey)
                         % Emergency exit
                         if ~dummymode
@@ -472,6 +477,10 @@ for setIdx = 1:numOfSets
                 [~, ~, keyCode] = KbCheck;
                 if keyCode(KbName('space'))
                     break;
+                elseif keyCode(Calibrate)
+                    if ~dummymode
+                        EyelinkDoTrackerSetup(el);
+                    end
                 end
             end
             WaitSecs(0.2);
@@ -503,7 +512,7 @@ for setIdx = 1:numOfSets
         
         Eyelink('message','Fix Cross Experimental');
       
-        fixationShown = CheckFixation(wPtr, rect, dummymode, escapeKey, CenterX, CenterY, White);
+        fixationShown = CheckFixation(wPtr, rect, dummymode, escapeKey, CenterX, CenterY, White, Calibrate, el);
 
         Screen('TextSize', wPtr, 30); % Reset text size
         
@@ -599,6 +608,10 @@ Screen('Flip', wPtr);
                     [~, ~, keyCode] = KbCheck;
                     if keyCode(KbName('space'))
                         break;
+                    elseif keyCode(Calibrate)
+                        if ~dummymode
+                            EyelinkDoTrackerSetup(el);
+                        end
                     end
                 end
                 WaitSecs(0.2);
@@ -663,6 +676,10 @@ Screen('Flip', wPtr);
                     [~, ~, keyCode] = KbCheck;
                     if keyCode(KbName('space'))
                         break;
+                    elseif keyCode(Calibrate)
+                        if ~dummymode
+                            EyelinkDoTrackerSetup(el);
+                        end
                     end
                 end
                 WaitSecs(0.2);
@@ -680,6 +697,9 @@ Screen('Flip', wPtr);
             Screen('DrawTexture', wPtr, texBreak);
             Screen('Flip', wPtr);
             KbWait; WaitSecs(2*imageDuration);
+            if ~dummymode
+                EyelinkDoDriftCorrection(el, CenterX, CenterY);
+            end
         end
         
         % -------------------- Incremental save -----------------
@@ -853,7 +873,7 @@ ShowCursor;
 
 %% ---------- Fixation Verification Function --------------------
 
-function fixationVerified = CheckFixation(wPtr, rect, dummymode, escapeKey, CenterX, CenterY, White)
+function fixationVerified = CheckFixation(wPtr, rect, dummymode, escapeKey, CenterX, CenterY, White, Calibrate, el)
 
     fixationVerified = false;
     radius = 100;
@@ -924,6 +944,15 @@ function fixationVerified = CheckFixation(wPtr, rect, dummymode, escapeKey, Cent
             Screen('CloseAll'); ShowCursor;
             fixationVerified = -1;
             return;
+        elseif keyCode(Calibrate)
+            if ~dummymode
+                Eyelink('StopRecording'); % Stop recording explicitly before calibration
+                EyelinkDoTrackerSetup(el);
+                % Restart recording after setup
+                Eyelink('StartRecording');
+                WaitSecs(0.1);
+                startFix = NaN; % reset fixation timer
+            end
         end
     end
 
