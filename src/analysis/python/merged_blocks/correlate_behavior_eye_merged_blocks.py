@@ -5,6 +5,15 @@ from matplotlib import pyplot as plt
 from scipy.stats import pearsonr
 
 
+def format_p_value(p_value: float) -> str:
+    """
+    Format p-values in a human-readable way for reports/CSV output.
+    """
+    if p_value < 0.0001:
+        return "<0.0001"
+    return f"{p_value:.4f}"
+
+
 def get_paths() -> dict:
     """
     Resolve paths relative to the project root.
@@ -143,10 +152,12 @@ def compute_and_report_pearson(
         return None
 
     r, p = pearsonr(subset[x_col], subset[y_col])
+    p_display = format_p_value(p)
+
     print(
         f"{description}: n = {n}, "
         f"effect size (r) = {r:.4f}, "
-        f"p-value (significance) = {p:.4f}"
+        f"p-value (significance) = {p_display}"
     )
 
     return {
@@ -156,6 +167,8 @@ def compute_and_report_pearson(
         "n": n,
         "pearson_r": r,
         "p_value": p,
+        "pearson_r_display": f"{r:.4f}",
+        "p_value_display": p_display,
     }
 
 
