@@ -52,11 +52,19 @@ Screen('TextSize', wPtr, 35);
 
 %% ---------- Experiment parameters ------------------------------
 numOfSets = 2;
+<<<<<<< HEAD
+numRegularTrials = 10;
+numDominanceTrials = 3;
+numOfTrials = numRegularTrials + numDominanceTrials; % 103 experimental trials per block
+numOfPractice = 2;
+breakTime = 2;
+=======
 numRegularTrials = 100;
 numDominanceTrials = 3;
 numOfTrials = numRegularTrials + numDominanceTrials; % 103 experimental trials per block
 numOfPractice = 10;
 breakTime = 20;
+>>>>>>> 63a28b09573520cf7399c54b0cb0730167e5b360
 numOfPoints = 0;
 imageDuration = 0.5;
 
