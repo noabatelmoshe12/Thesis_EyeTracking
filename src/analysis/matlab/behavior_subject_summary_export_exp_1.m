@@ -37,9 +37,9 @@ end
 a1 = 'subject_';   % change to 'Subject_' if needed
 a2 = '_Results_Decision_Strategy_Experiment.mat';
 
-subjects = setdiff(201:228, [208 221]); % Noa: exclude subjects 208 and 221 due to invalid/unusable eye-tracking EDF data
+subjects = setdiff(101:140,[]); % Noa: exclude subjects 208 and 221 due to invalid/unusable eye-tracking EDF data
 numOfSubjects = length(subjects);% Noa: N is derived from the final subject list to avoid mismatch after exclusions
-firstSubjectID = 201;% firstSubjectID = 201; % Noa: not used in Exp. 2 version; subjects are defined explicitly above
+firstSubjectID = 101;% firstSubjectID = 201; % Noa: not used in Exp. 2 version; subjects are defined explicitly above
 numOfTrialsPerBlock = 100;
 
 % -----------------------
@@ -254,7 +254,7 @@ results_table = table( ...
 disp(results_table)
 
 %% save summary table
-output_file = fullfile(output_dir, 'behavior_subject_summary.csv');
+output_file = fullfile(output_dir, 'behavior_subject_summary_exp_1.csv');
 writetable(results_table, output_file);
 
 fprintf('Summary table saved to:\n%s\n', output_file);

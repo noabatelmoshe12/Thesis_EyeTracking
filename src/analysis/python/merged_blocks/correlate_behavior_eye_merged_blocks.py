@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import datetime
 
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -28,16 +29,27 @@ def get_paths() -> dict:
 
     merged_dir.mkdir(parents=True, exist_ok=True)
 
+    # Prefer an explicitly provided results file (user-specified)
+    explicit_behavior_path = Path(r"C:\\Projects\\Thesis_EyeTracking\\data\\results\\behavior_wa_score_relative_pooled_3_4_exp2.csv")
+    if explicit_behavior_path.is_file():
+        behavior_path = explicit_behavior_path
+    else:
+        default_behavior_path = merged_dir / "behavior_wa_score_relative_pooled_3_4.csv"
+        if default_behavior_path.is_file():
+            behavior_path = default_behavior_path
+        else:
+            behavior_candidates = sorted(merged_dir.glob("behavior_wa_score_relative_pooled_3_4*.csv"))
+            behavior_path = behavior_candidates[0] if behavior_candidates else default_behavior_path
+
     return {
         "project_root": project_root,
         "results_dir": results_dir,
         "merged_dir": merged_dir,
-        "behavior_path": merged_dir / "behavior_wa_score_relative_pooled_3_4.csv",
+        "behavior_path": behavior_path,
         "eye_path": merged_dir / "subject_vertical_index_total_transitions_merged_blocks.csv",
         "merged_output_path": merged_dir / "behavior_eye_merged_subject_level_3_4.csv",
         "corr_output_path": merged_dir / "behavior_eye_correlations_subject_level_3_4.csv",
         "plot_vertical_output_path": merged_dir / "behavior_vs_verticalindex_subject_3_4.png",
-        "plot_valid_output_path": merged_dir / "behavior_vs_valid_transitions_subject_3_4.png",
     }
 
 
@@ -125,8 +137,16 @@ def merge_behavior_eye(
     print(merged.head())
     print(f"\nTotal matched subjects used in correlations: {len(merged)}\n")
 
-    merged.to_csv(merged_output_path, index=False, encoding="utf-8")
-    print(f"Merged dataset saved to: {merged_output_path}")
+    try:
+        merged.to_csv(merged_output_path, index=False, encoding="utf-8")
+        print(f"Merged dataset saved to: {merged_output_path}")
+    except PermissionError:
+        fallback_path = merged_output_path.with_name(
+            f"{merged_output_path.stem}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{merged_output_path.suffix}"
+        )
+        merged.to_csv(fallback_path, index=False, encoding="utf-8")
+        print(f"[WARN] Could not write to locked file: {merged_output_path}")
+        print(f"Merged dataset saved to fallback path: {fallback_path}")
 
     return merged
 
@@ -138,7 +158,11 @@ def compute_and_report_pearson(
     description: str,
 ) -> dict | None:
     """
-    Compute and print Pearson correlation for two columns.
+    Compute and print one-sided Pearson correlation (positive direction) for two columns.
+
+    Hypothesis:
+    H0: rho <= 0
+    H1: rho > 0
     """
     if x_col not in df.columns or y_col not in df.columns:
         print(f"[WARN] Columns not found for correlation: {x_col}, {y_col}")
@@ -151,7 +175,13 @@ def compute_and_report_pearson(
         print(f"[WARN] Not enough valid data points for {description} (n={n}).")
         return None
 
-    r, p = pearsonr(subset[x_col], subset[y_col])
+    try:
+        r, p = pearsonr(subset[x_col], subset[y_col], alternative="greater")
+    except TypeError:
+        # Fallback for older SciPy versions that only support two-sided p-values.
+        r, p_two_sided = pearsonr(subset[x_col], subset[y_col])
+        p = p_two_sided / 2 if r >= 0 else 1 - (p_two_sided / 2)
+
     p_display = format_p_value(p)
 
     print(
@@ -169,9 +199,8 @@ def compute_and_report_pearson(
         "p_value": p,
         "pearson_r_display": f"{r:.4f}",
         "p_value_display": p_display,
+        "test_side": "one-sided (greater)",
     }
-
-
 def scatter_behavior_vs_vertical(
     df: pd.DataFrame,
     behavior_col: str,
@@ -224,57 +253,6 @@ def scatter_behavior_vs_vertical(
     print(f"Scatter plot saved to: {output_path}")
 
 
-def scatter_behavior_vs_valid_transitions(
-    df: pd.DataFrame,
-    behavior_col: str,
-    transition_col: str,
-    output_path: Path,
-) -> None:
-    """
-    Create and save a scatter plot:
-    behavioral tendency vs valid transition count per subject.
-    """
-    required_columns = {"subject_id", behavior_col, transition_col}
-    missing = required_columns - set(df.columns)
-    if missing:
-        print(f"[WARN] Columns not found for plotting: {missing}")
-        return
-
-    plot_df = df[["subject_id", behavior_col, transition_col]].dropna()
-
-    if plot_df.empty:
-        print("[WARN] No data available for plotting.")
-        return
-
-    subjects = plot_df["subject_id"].astype(str).tolist()
-    n_subjects = len(subjects)
-    cmap = plt.get_cmap("tab10")
-    colors = [cmap(i % cmap.N) for i in range(n_subjects)]
-
-    plt.figure(figsize=(6, 5))
-
-    for (subject, (_, row), color) in zip(subjects, plot_df.iterrows(), colors):
-        plt.scatter(row[behavior_col], row[transition_col], s=40, alpha=0.8, color=color)
-        plt.annotate(
-            subject,
-            (row[behavior_col], row[transition_col]),
-            textcoords="offset points",
-            xytext=(3, 3),
-            fontsize=8,
-        )
-
-    plt.xlabel("Behavioral compensatory tendency")
-    plt.ylabel("Valid_Transition_Count")
-    plt.title("Behavioral tendency vs valid transitions")
-
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300)
-    plt.close()
-
-    print(f"Scatter plot saved to: {output_path}")
-
-
 def main() -> None:
     paths = get_paths()
 
@@ -313,19 +291,18 @@ def main() -> None:
     if vertical_corr is not None:
         corr_rows.append(vertical_corr)
 
-    valid_transitions_corr = compute_and_report_pearson(
-        merged_df,
-        x_col="wa_score_pooled_3_4",
-        y_col="Valid_Transition_Count",
-        description="WA pooled (3/4) vs valid transition count",
-    )
-    if valid_transitions_corr is not None:
-        corr_rows.append(valid_transitions_corr)
-
     if corr_rows:
         corr_df = pd.DataFrame(corr_rows)
-        corr_df.to_csv(paths["corr_output_path"], index=False, encoding="utf-8")
-        print(f"Correlation summary saved to: {paths['corr_output_path']}")
+        try:
+            corr_df.to_csv(paths["corr_output_path"], index=False, encoding="utf-8")
+            print(f"Correlation summary saved to: {paths['corr_output_path']}")
+        except PermissionError:
+            fallback_corr_path = paths["corr_output_path"].with_name(
+                f"{paths['corr_output_path'].stem}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{paths['corr_output_path'].suffix}"
+            )
+            corr_df.to_csv(fallback_corr_path, index=False, encoding="utf-8")
+            print(f"[WARN] Could not write to locked file: {paths['corr_output_path']}")
+            print(f"Correlation summary saved to fallback path: {fallback_corr_path}")
 
     print("===== END CORRELATION =====\n")
 
@@ -334,13 +311,6 @@ def main() -> None:
         behavior_col="wa_score_pooled_3_4",
         eye_col="VerticalIndex_subject",
         output_path=paths["plot_vertical_output_path"],
-    )
-
-    scatter_behavior_vs_valid_transitions(
-        merged_df,
-        behavior_col="wa_score_pooled_3_4",
-        transition_col="Valid_Transition_Count",
-        output_path=paths["plot_valid_output_path"],
     )
 
 

@@ -25,16 +25,14 @@ Inputs (under data/results/)
 
 Indices used here
 -----------------
-- ScanIndex_block:  fraction of **horizontal** transitions
-    ScanIndex_block = H / (H + V)
-
 - VerticalIndex_block: fraction of **vertical** transitions
-    VerticalIndex_block = 1 - ScanIndex_block = V / (H + V)
+    VerticalIndex_block = V / (H + V), where H is horizontal transitions
+    and V is vertical transitions.
 
 In the thesis logic, *more compensatory / WA strategy* is associated with
-more **vertical** scanning. Therefore, **VerticalIndex_block** is often
-the more intuitive index to correlate with WA scores: higher WA should
-correspond to higher VerticalIndex_block if the theory holds.
+more **vertical** scanning. Therefore, **VerticalIndex_block** is the
+index used to correlate with WA scores: higher WA should correspond to
+higher VerticalIndex_block if the theory holds.
 
 High-level workflow
 -------------------
@@ -45,14 +43,11 @@ High-level workflow
 3. Compute VerticalIndex_block = 1 - ScanIndex_block in the long
    eye DataFrame.
 4. Pivot the eye data to a subject-level wide format with columns:
-      - scanindex_block1, scanindex_block2
       - verticalindex_block1, verticalindex_block2
 5. Merge the behavioral and eye tables on subject_id and save the
    merged dataset to data/results/behavior_eye_merged.csv.
 6. Compute Pearson correlations for:
-      - wa_score_3 vs scanindex_block1
       - wa_score_3 vs verticalindex_block1
-      - wa_score_4 vs scanindex_block2
       - wa_score_4 vs verticalindex_block2
 7. Create and save scatter plots for:
       - Block 1: wa_score_3 (x) vs verticalindex_block1 (y)
@@ -184,28 +179,27 @@ def pivot_eye_data(eye_df: pd.DataFrame) -> pd.DataFrame:
     """Pivot long eye data to wide format by subject and block.
 
     Produces columns:
-        - scanindex_block1, scanindex_block2
         - verticalindex_block1, verticalindex_block2
     One row per subject_id.
     """
 
-    required_columns = {"subject_id", "Block", "ScanIndex_block", "VerticalIndex_block"}
+    required_columns = {"subject_id", "Block", "VerticalIndex_block"}
     missing = required_columns - set(eye_df.columns)
     if missing:
         raise KeyError(f"Eye data missing required columns: {missing}")
 
-    # Pivot both ScanIndex_block and VerticalIndex_block simultaneously
+    # Pivot VerticalIndex_block only
     wide = eye_df.pivot_table(
         index="subject_id",
         columns="Block",
-        values=["ScanIndex_block", "VerticalIndex_block"],
+        values=["VerticalIndex_block"],
     )
 
-    # Flatten MultiIndex columns to simple names, e.g. scanindex_block1, verticalindex_block2
+    # Flatten MultiIndex columns to simple names, e.g. verticalindex_block1, verticalindex_block2
     renamed_columns = []
     for metric, block in wide.columns.to_flat_index():
-        # metric is e.g. "ScanIndex_block" or "VerticalIndex_block"
-        base = metric.replace("_block", "").lower()  # -> "scanindex" / "verticalindex"
+        # metric is "VerticalIndex_block"
+        base = metric.replace("_block", "").lower()  # -> "verticalindex"
         renamed_columns.append(f"{base}_block{int(block)}")
 
     wide.columns = renamed_columns
@@ -238,10 +232,25 @@ def compute_and_report_pearson(
     x_col: str,
     y_col: str,
     description: str,
+    one_tailed: bool = False,
 ) -> None:
     """Compute and print Pearson correlation for two columns.
 
     Drops rows where either x_col or y_col is NaN.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input data frame.
+    x_col : str
+        Column name for x variable.
+    y_col : str
+        Column name for y variable.
+    description : str
+        Description of the correlation (for reporting).
+    one_tailed : bool, optional
+        If True, converts two-tailed p-value to one-tailed (positive direction).
+        Default is False (two-tailed test).
     """
 
     if x_col not in df.columns or y_col not in df.columns:
@@ -255,11 +264,26 @@ def compute_and_report_pearson(
         print(f"[WARN] Not enough valid data points for {description} (n={n}).")
         return
 
-    r, p = pearsonr(subset[x_col], subset[y_col])
+    r, p_two_tailed = pearsonr(subset[x_col], subset[y_col])
+
+    # Convert to one-tailed p-value if requested
+    if one_tailed:
+        # One-tailed positive (right-tailed) test: H1: r > 0
+        # If r > 0: p_one_tailed = p_two_tailed / 2
+        # If r ≤ 0: p_one_tailed = 1 - (p_two_tailed / 2)
+        if r > 0:
+            p = p_two_tailed / 2
+        else:
+            p = 1 - (p_two_tailed / 2)
+        test_type = "[one-tailed positive]"
+    else:
+        p = p_two_tailed
+        test_type = "[two-tailed]"
+
     print(
         f"{description}: n = {n}, "
         f"effect size (r) = {r:.4f}, "
-        f"p-value (significance) = {p:.4f}"
+        f"p-value (significance) = {p:.4f} {test_type}"
     )
 
 
@@ -426,34 +450,24 @@ def main() -> None:
     #   Block 1 -> wa_score_3 (3-attribute block)
     #   Block 2 -> wa_score_4 (4-attribute block)
 
-    # Horizontal fraction (ScanIndex_block)
-    compute_and_report_pearson(
-        merged_df,
-        x_col="wa_score_3",
-        y_col="scanindex_block1",
-        description="Block 1 (3-attr): WA score (wa_score_3) vs ScanIndex_block1 (horizontal fraction)",
-    )
-    compute_and_report_pearson(
-        merged_df,
-        x_col="wa_score_4",
-        y_col="scanindex_block2",
-        description="Block 2 (4-attr): WA score (wa_score_4) vs ScanIndex_block2 (horizontal fraction)",
-    )
-
-    # Vertical fraction (VerticalIndex_block)
+    # Main hypothesis tests: WA score vs VerticalIndex_block
+    # One-tailed positive test: H1 - higher WA (compensatory strategy) correlates
+    # with higher VerticalIndex (more vertical scanning)
     compute_and_report_pearson(
         merged_df,
         x_col="wa_score_3",
         y_col="verticalindex_block1",
         description="Block 1 (3-attr): WA score (wa_score_3) vs VerticalIndex_block1 (vertical fraction)",
+        one_tailed=True,
     )
     compute_and_report_pearson(
         merged_df,
         x_col="wa_score_4",
         y_col="verticalindex_block2",
         description="Block 2 (4-attr): WA score (wa_score_4) vs VerticalIndex_block2 (vertical fraction)",
+        one_tailed=True,
     )
-
+    # Consistency checks: two-tailed tests (no directional hypothesis)
     # Correlation between 3- vs 4-attribute behavioral compensatory strategy
     compute_and_report_pearson(
         merged_df,
@@ -463,6 +477,7 @@ def main() -> None:
             "Behavior: WA score 3-attribute (wa_score_3) "
             "vs WA score 4-attribute (wa_score_4)"
         ),
+        one_tailed=False,
     )
 
     # Correlation between 3- vs 4-attribute vertical eye-scan indices
@@ -474,8 +489,8 @@ def main() -> None:
             "Eye scan vertical index: Block 1 (verticalindex_block1) "
             "vs Block 2 (verticalindex_block2)"
         ),
+        one_tailed=False,
     )
-
     print("===== END CORRELATIONS =====\n")
 
     # Scatter plots for the vertical index (more intuitive interpretation)
