@@ -66,6 +66,9 @@ Thumbs.db
 *.asv
 *.slxc
 
+# Raw experiment archives
+data/raw/*.zip
+
 # Analysis Output
 *.csv
 
