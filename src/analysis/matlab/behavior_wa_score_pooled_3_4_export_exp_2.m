@@ -28,7 +28,7 @@
 
 clear; clc
 a1 = 'subject_'; a2 = '_Results_Decision_Strategy_Experiment.mat';
-subjects = setdiff(201:228, [208 205 221]); % Noa: Exp. 2 subjects, excluding 208 and 221 according to current eye-tracking QC decisions
+subjects = setdiff(201:244, [208 205 221 240]); % Noa: Exp. 2 subjects, excluding 208 and 221 according to current eye-tracking QC decisions
 numOfSubjects = length(subjects); % Noa: N is derived from the final subject list to avoid mismatch after exclusions
 numOfTrials = 100;
 numOfPractice = 10;

@@ -26,7 +26,7 @@
 %% extract data
 clear; clc
 a1 = 'subject_'; a2 = '_Results_Decision_Strategy_Experiment.mat';
-subjects = setdiff(201:228, [208 221]); % Noa: Exp. 2 subjects, excluding 208 and 221 according to current eye-tracking QC decisions
+subjects = setdiff(201:244, [208 205 221 240]); % Noa: Exp. 2 subjects, excluding 208 and 221 according to current eye-tracking QC decisions
 numOfSubjects = length(subjects); % Noa: N is derived from the final subject list to avoid mismatch after exclusions
 numOfTrials = 100;
 numOfPractice = 10;
@@ -151,5 +151,5 @@ results_table = table( ...
 );
 
 output_dir = 'C:\Projects\Thesis_EyeTracking\data\results';
-output_file = fullfile(output_dir, 'behavior_wa_scores_exp2_excluding_208_221.csv');
+output_file = fullfile(output_dir, 'behavior_wa_scores.csv');
 writetable(results_table, output_file);

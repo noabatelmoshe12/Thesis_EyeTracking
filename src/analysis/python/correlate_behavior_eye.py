@@ -233,7 +233,7 @@ def compute_and_report_pearson(
     y_col: str,
     description: str,
     one_tailed: bool = False,
-) -> None:
+) -> float | None:
     """Compute and print Pearson correlation for two columns.
 
     Drops rows where either x_col or y_col is NaN.
@@ -255,14 +255,14 @@ def compute_and_report_pearson(
 
     if x_col not in df.columns or y_col not in df.columns:
         print(f"[WARN] Columns not found for correlation: {x_col}, {y_col}")
-        return
+        return None
 
     subset = df[[x_col, y_col]].dropna()
     n = len(subset)
 
     if n < 2:
         print(f"[WARN] Not enough valid data points for {description} (n={n}).")
-        return
+        return None
 
     r, p_two_tailed = pearsonr(subset[x_col], subset[y_col])
 
@@ -285,6 +285,7 @@ def compute_and_report_pearson(
         f"effect size (r) = {r:.4f}, "
         f"p-value (significance) = {p:.4f} {test_type}"
     )
+    return r
 
 
 def scatter_wa_vs_vertical(
@@ -293,6 +294,7 @@ def scatter_wa_vs_vertical(
     vertical_col: str,
     block_label: str,
     output_path: Path,
+    effect_size_r: float | None = None,
 ) -> None:
     """Create and save a scatter plot: WA score vs VerticalIndex_block.
 
@@ -348,6 +350,18 @@ def scatter_wa_vs_vertical(
     if n_subjects <= 10:
         plt.legend(title="Subject ID", fontsize=8)
 
+    if effect_size_r is not None:
+        plt.text(
+            0.02,
+            0.98,
+            f"Effect size\nr = {effect_size_r:.3f}",
+            transform=plt.gca().transAxes,
+            va="top",
+            ha="left",
+            fontsize=10,
+            bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "alpha": 0.85},
+        )
+
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
 
@@ -365,6 +379,7 @@ def scatter_by_subject(
     y_label: str,
     title: str,
     output_path: Path,
+    effect_size_r: float | None = None,
 ) -> None:
     """Generic scatter plot of two columns, colored/annotated by subject_id."""
 
@@ -403,6 +418,18 @@ def scatter_by_subject(
 
     if n_subjects <= 10:
         plt.legend(title="Subject ID", fontsize=8)
+
+    if effect_size_r is not None:
+        plt.text(
+            0.02,
+            0.98,
+            f"Effect size\nr = {effect_size_r:.3f}",
+            transform=plt.gca().transAxes,
+            va="top",
+            ha="left",
+            fontsize=10,
+            bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "alpha": 0.85},
+        )
 
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
@@ -453,14 +480,14 @@ def main() -> None:
     # Main hypothesis tests: WA score vs VerticalIndex_block
     # One-tailed positive test: H1 - higher WA (compensatory strategy) correlates
     # with higher VerticalIndex (more vertical scanning)
-    compute_and_report_pearson(
+    r_block1 = compute_and_report_pearson(
         merged_df,
         x_col="wa_score_3",
         y_col="verticalindex_block1",
         description="Block 1 (3-attr): WA score (wa_score_3) vs VerticalIndex_block1 (vertical fraction)",
         one_tailed=True,
     )
-    compute_and_report_pearson(
+    r_block2 = compute_and_report_pearson(
         merged_df,
         x_col="wa_score_4",
         y_col="verticalindex_block2",
@@ -469,7 +496,7 @@ def main() -> None:
     )
     # Consistency checks: two-tailed tests (no directional hypothesis)
     # Correlation between 3- vs 4-attribute behavioral compensatory strategy
-    compute_and_report_pearson(
+    r_behavior_3_vs_4 = compute_and_report_pearson(
         merged_df,
         x_col="wa_score_3",
         y_col="wa_score_4",
@@ -481,7 +508,7 @@ def main() -> None:
     )
 
     # Correlation between 3- vs 4-attribute vertical eye-scan indices
-    compute_and_report_pearson(
+    r_vertical_1_vs_2 = compute_and_report_pearson(
         merged_df,
         x_col="verticalindex_block1",
         y_col="verticalindex_block2",
@@ -500,6 +527,7 @@ def main() -> None:
         vertical_col="verticalindex_block1",
         block_label="Block 1 (3-attribute)",
         output_path=paths["plot_block1_path"],
+        effect_size_r=r_block1,
     )
 
     scatter_wa_vs_vertical(
@@ -508,6 +536,7 @@ def main() -> None:
         vertical_col="verticalindex_block2",
         block_label="Block 2 (4-attribute)",
         output_path=paths["plot_block2_path"],
+        effect_size_r=r_block2,
     )
 
     # Scatter plot: WA 3-attribute vs WA 4-attribute
@@ -522,6 +551,7 @@ def main() -> None:
             "3-attribute vs 4-attribute blocks"
         ),
         output_path=paths["plot_behavior_3_vs_4_path"],
+        effect_size_r=r_behavior_3_vs_4,
     )
 
     # Scatter plot: vertical index 3-attribute vs 4-attribute
@@ -536,6 +566,7 @@ def main() -> None:
             "3-attribute block vs 4-attribute block"
         ),
         output_path=paths["plot_verticalindex_3_vs_4_path"],
+        effect_size_r=r_vertical_1_vs_2,
     )
 
 

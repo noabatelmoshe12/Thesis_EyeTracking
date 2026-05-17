@@ -206,6 +206,7 @@ def scatter_behavior_vs_vertical(
     behavior_col: str,
     eye_col: str,
     output_path: Path,
+    effect_size_r: float | None = None,
 ) -> None:
     """
     Create and save a scatter plot:
@@ -243,7 +244,24 @@ def scatter_behavior_vs_vertical(
     plt.xlabel("Behavioral compensatory tendency")
     plt.ylabel("VerticalIndex_subject (higher = more vertical scanning)")
     plt.title("Behavioral tendency vs merged vertical eye-scan index")
-    plt.ylim(0, 1)
+
+    y_max = float(plot_df[eye_col].max())
+    if y_max <= 0:
+        y_max = 0.01
+    y_upper = min(1.0, y_max * 1.08)
+    plt.ylim(0, y_upper)
+
+    if effect_size_r is not None:
+        plt.text(
+            0.02,
+            0.98,
+            f"Effect size\nr = {effect_size_r:.3f}",
+            transform=plt.gca().transAxes,
+            va="top",
+            ha="left",
+            fontsize=10,
+            bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "alpha": 0.85},
+        )
 
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
@@ -311,6 +329,7 @@ def main() -> None:
         behavior_col="wa_score_pooled_3_4",
         eye_col="VerticalIndex_subject",
         output_path=paths["plot_vertical_output_path"],
+        effect_size_r=(vertical_corr["pearson_r"] if vertical_corr is not None else None),
     )
 
 

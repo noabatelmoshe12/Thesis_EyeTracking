@@ -50,72 +50,28 @@ clc;
 % Define the subject numbers to check.
 subjects = 201:244;
 
-% Minimum number of correct catch trials required for inclusion.
+% Define the folder where the behavioral result files are stored.
+% The script will look for files such as:
+% Subject_201_Results_Decision_Strategy_Experiment.mat
+% Subject_202_Results_Decision_Strategy_Experiment.mat
+% etc.
+dataFolder = 'C:\Users\user\Documents\Noa\Thesis_EyeTracking\src\experiment';
+
+% Define the minimum number of correct catch trials required for inclusion.
 % The criterion is at least 4 correct responses out of 6 catch trials.
 minCorrectCatch = 4;
 
-% -------------------------------------------------------------------------
-% Define the folder where the behavioral result files are stored.
-%
-% This folder should contain files such as:
-% Subject_201_Results_Decision_Strategy_Experiment.mat
-% Subject_202_Results_Decision_Strategy_Experiment.mat
-% -------------------------------------------------------------------------
+% Define the folder where the QC output files will be saved.
+% This version saves the outputs inside the current MATLAB folder,
+% in a subfolder called QC_results, to avoid permission problems.
+outputFolder = fullfile(pwd, 'QC_results');
 
-dataFolderDefault = 'C:\Projects\Thesis_EyeTracking\data\raw';
-
-% If the default folder exists, use it.
-if exist(dataFolderDefault, 'dir')
-    dataFolder = dataFolderDefault;
-    fprintf('Using default data folder:\n%s\n', dataFolder);
-
-else
-    % If the default folder does not exist, ask the user to select a folder.
-    fprintf('Default data folder was not found:\n%s\n', dataFolderDefault);
-    fprintf('Please select the folder with the subject result MAT files.\n');
-
-    dataFolder = uigetdir(pwd, ...
-        'Select folder with Subject_*_Results_Decision_Strategy_Experiment.mat files');
-
-    % If the user cancels folder selection, stop the script safely.
-    if dataFolder == 0
-        fprintf('\nNo data folder selected. Script stopped.\n');
-        return
-    end
-
-    fprintf('Data folder selected:\n%s\n', dataFolder);
+% If the output folder does not exist, create it.
+if ~exist(outputFolder, 'dir')
+    mkdir(outputFolder);
 end
 
-% -------------------------------------------------------------------------
-% Define output folder.
-%
-% This saves to a QC_results folder inside your project if possible.
-% If that fails, it saves to the MATLAB/Windows temp folder.
-% -------------------------------------------------------------------------
-
-projectOutputFolder = fullfile('C:\Projects\Thesis_EyeTracking', ...
-    'outputs', 'validation', 'QC_results');
-
-try
-    if ~exist(projectOutputFolder, 'dir')
-        mkdir(projectOutputFolder);
-    end
-
-    outputFolder = projectOutputFolder;
-
-catch
-    warning('Could not create project output folder. Saving to tempdir instead.');
-
-    outputFolder = fullfile(tempdir, 'QC_results');
-
-    if ~exist(outputFolder, 'dir')
-        mkdir(outputFolder);
-    end
-end
-
-fprintf('Output folder:\n%s\n', outputFolder);
-
-% Define output file names.
+% Define the full paths of the output files.
 outputCSV = fullfile(outputFolder, 'catch_trials_QC_subjects_201_244.csv');
 outputMAT = fullfile(outputFolder, 'catch_trials_QC_subjects_201_244.mat');
 
@@ -123,6 +79,8 @@ outputMAT = fullfile(outputFolder, 'catch_trials_QC_subjects_201_244.mat');
 % Initialize QC table
 % -------------------------------------------------------------------------
 
+% Create an empty table.
+% Each iteration of the loop will add one row for one subject.
 QC = table();
 
 %% -------------------------------------------------------------------------
@@ -138,7 +96,7 @@ for subj = subjects
     fprintf('\nChecking subject %d...\n', subj);
 
     %% ---------------------------------------------------------------------
-    % Check whether the subject file exists
+    % Check whether the subject's file exists
     % ---------------------------------------------------------------------
 
     if ~exist(fileName, 'file')
@@ -159,81 +117,23 @@ for subj = subjects
     % Load required variables
     % ---------------------------------------------------------------------
 
-    loadedData = load(fileName);
-
-    if ~isfield(loadedData, 'Data')
-        warning('Subject %d: variable Data was not found in file.', subj);
-
-        newRow = table(subj, true, NaN, NaN, NaN, false, ...
-            'VariableNames', {'Subject', 'FileFound', 'nCatch', ...
-                              'nCorrectCatch', 'CatchAccuracy', ...
-                              'PassedCatchCriterion'});
-
-        QC = [QC; newRow];
-        continue
-    end
-
-    if ~isfield(loadedData, 'Trial_Type')
-        warning('Subject %d: variable Trial_Type was not found in file.', subj);
-
-        newRow = table(subj, true, NaN, NaN, NaN, false, ...
-            'VariableNames', {'Subject', 'FileFound', 'nCatch', ...
-                              'nCorrectCatch', 'CatchAccuracy', ...
-                              'PassedCatchCriterion'});
-
-        QC = [QC; newRow];
-        continue
-    end
-
-    Data = loadedData.Data;
-    Trial_Type = loadedData.Trial_Type;
+    load(fileName, 'Data', 'Trial_Type')
 
     %% ---------------------------------------------------------------------
-    % Convert Trial_Type to string if needed
-    % ---------------------------------------------------------------------
-
-    if iscell(Trial_Type)
-        Trial_Type = string(Trial_Type);
-    elseif ischar(Trial_Type)
-        Trial_Type = string(cellstr(Trial_Type));
-    elseif iscategorical(Trial_Type)
-        Trial_Type = string(Trial_Type);
-    end
-
-    Trial_Type = Trial_Type(:);
-
-    %% ---------------------------------------------------------------------
-    % Identify catch / dominance trials
+    % Identify catch / dominance trials and extract their accuracy
     % ---------------------------------------------------------------------
 
     catchIdx = Trial_Type == "dominance";
 
-    % Count the number of catch/dominance trials.
+    % Count the number of catch/dominance trials found for this subject.
     % This should normally be 6.
     nCatch = sum(catchIdx);
 
     %% ---------------------------------------------------------------------
     % Extract trial-by-trial accuracy
-    %
-    % In the current experiment, accuracy is stored in:
-    % Data{3}{2}
     % ---------------------------------------------------------------------
 
-    try
-        acc = Data{3}{2};
-    catch
-        warning('Subject %d: could not extract accuracy from Data{3}{2}.', subj);
-
-        newRow = table(subj, true, nCatch, NaN, NaN, false, ...
-            'VariableNames', {'Subject', 'FileFound', 'nCatch', ...
-                              'nCorrectCatch', 'CatchAccuracy', ...
-                              'PassedCatchCriterion'});
-
-        QC = [QC; newRow];
-        continue
-    end
-
-    acc = acc(:);
+    acc = Data{3}{2};
 
     %% ---------------------------------------------------------------------
     % Safety checks
@@ -253,19 +153,7 @@ for subj = subjects
     % Extract accuracy for catch/dominance trials only
     % ---------------------------------------------------------------------
 
-    if length(acc) == length(Trial_Type)
-        catchAcc = acc(catchIdx);
-    else
-        warning('Subject %d: cannot compute catch accuracy because vector lengths do not match.', subj);
-
-        newRow = table(subj, true, nCatch, NaN, NaN, false, ...
-            'VariableNames', {'Subject', 'FileFound', 'nCatch', ...
-                              'nCorrectCatch', 'CatchAccuracy', ...
-                              'PassedCatchCriterion'});
-
-        QC = [QC; newRow];
-        continue
-    end
+    catchAcc = acc(catchIdx);
 
     %% ---------------------------------------------------------------------
     % Compute catch-trial performance
@@ -304,20 +192,16 @@ for subj = subjects
     QC = [QC; newRow];
 
     %% ---------------------------------------------------------------------
-    % Clear temporary variables before moving to the next subject
+    % Clear loaded variables before moving to the next subject
     % ---------------------------------------------------------------------
 
-    clear loadedData Data Trial_Type acc catchIdx catchAcc
+    clear Data Trial_Type acc catchIdx catchAcc
 
 end
 
 %% -------------------------------------------------------------------------
 % Display final QC table
 % -------------------------------------------------------------------------
-
-fprintf('\n============================================================\n');
-fprintf('Final catch-trial QC table:\n');
-fprintf('============================================================\n');
 
 disp(QC)
 
@@ -333,17 +217,11 @@ subjectsToExclude = QC.Subject(QC.FileFound & ~QC.PassedCatchCriterion);
 % File was found, and the participant passed the catch-trial criterion.
 subjectsToInclude = QC.Subject(QC.FileFound & QC.PassedCatchCriterion);
 
-% Subjects with missing files.
-subjectsMissingFiles = QC.Subject(~QC.FileFound);
-
 fprintf('\nSubjects to exclude based on catch trials:\n');
 disp(subjectsToExclude)
 
 fprintf('Subjects to include based on catch trials:\n');
 disp(subjectsToInclude)
-
-fprintf('Subjects with missing files:\n');
-disp(subjectsMissingFiles)
 
 %% -------------------------------------------------------------------------
 % Save outputs
@@ -351,15 +229,7 @@ disp(subjectsMissingFiles)
 
 writetable(QC, outputCSV);
 
-save(outputMAT, ...
-    'QC', ...
-    'subjectsToExclude', ...
-    'subjectsToInclude', ...
-    'subjectsMissingFiles');
+save(outputMAT, 'QC', 'subjectsToExclude', 'subjectsToInclude');
 
 fprintf('\nQC table saved to:\n%s\n', outputCSV);
 fprintf('MAT file saved to:\n%s\n', outputMAT);
-
-fprintf('\nOutput folder:\n%s\n', outputFolder);
-
-fprintf('\nDone.\n');
