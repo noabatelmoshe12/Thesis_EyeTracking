@@ -345,6 +345,9 @@ def scatter_wa_vs_vertical(
         "and tendency for vertical scanning"
     )
 
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+
     # For small samples, a legend helps the supervisor see which
     # color corresponds to which participant.
     if n_subjects <= 10:
@@ -415,6 +418,9 @@ def scatter_by_subject(
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.title(title)
+
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
 
     if n_subjects <= 10:
         plt.legend(title="Subject ID", fontsize=8)

@@ -245,11 +245,8 @@ def scatter_behavior_vs_vertical(
     plt.ylabel("VerticalIndex_subject (higher = more vertical scanning)")
     plt.title("Behavioral tendency vs merged vertical eye-scan index")
 
-    y_max = float(plot_df[eye_col].max())
-    if y_max <= 0:
-        y_max = 0.01
-    y_upper = min(1.0, y_max * 1.08)
-    plt.ylim(0, y_upper)
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
 
     if effect_size_r is not None:
         plt.text(
