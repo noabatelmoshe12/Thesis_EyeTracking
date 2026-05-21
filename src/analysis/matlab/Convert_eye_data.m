@@ -239,6 +239,8 @@ function Convert_eye_data(mat, subject_code, output_directory)
                         end
                     end
                     Fixations(count, 1:length(Fix_sequance)) = Fix_sequance';
+                else
+                    DetailedFixations(end+1, :) = {subject_code, set_num, trial_num, 1, NaN, NaN, NaN, NaN, 0, NaN, NaN, NaN, NaN};
                 end
                 
                 
