@@ -20,27 +20,36 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, linregress
 
-# Try to import transitions module. Add src/analysis/python to system path if needed.
+# Try to import transitions module. Try absolute import first (relative to 'src' import root)
+# to satisfy static analysis/linters, then fall back to relative or sys.path adjustment.
 try:
-    from merged_blocks.run_subject_total_transitions_vertical_index import main as run_transitions
+    from analysis.python.merged_blocks.run_subject_total_transitions_vertical_index import main as run_transitions
 except ImportError:
-    script_dir = Path(__file__).resolve().parent
-    if str(script_dir) not in sys.path:
-        sys.path.append(str(script_dir))
-    from merged_blocks.run_subject_total_transitions_vertical_index import main as run_transitions
+    try:
+        from merged_blocks.run_subject_total_transitions_vertical_index import main as run_transitions
+    except ImportError:
+        script_dir = Path(__file__).resolve().parent
+        if str(script_dir) not in sys.path:
+            sys.path.append(str(script_dir))
+        from merged_blocks.run_subject_total_transitions_vertical_index import main as run_transitions
 
-# Try to import block-level summary module.
+# Try to import block-level summary module. Try absolute import first (relative to 'src' import root)
+# to satisfy static analysis/linters, then fall back to relative or sys.path adjustment.
 try:
-    from run_final_analysis import main as run_block_preprocessing
+    from analysis.python.run_final_analysis import main as run_block_preprocessing
 except ImportError:
-    script_dir = Path(__file__).resolve().parent
-    if str(script_dir) not in sys.path:
-        sys.path.append(str(script_dir))
-    from run_final_analysis import main as run_block_preprocessing
+    try:
+        from run_final_analysis import main as run_block_preprocessing
+    except ImportError:
+        script_dir = Path(__file__).resolve().parent
+        if str(script_dir) not in sys.path:
+            sys.path.append(str(script_dir))
+        from run_final_analysis import main as run_block_preprocessing
 
 
 def format_p_value(p_value: float) -> str:
@@ -100,16 +109,16 @@ def get_paths() -> dict:
         "behavior_block_path": results_dir / "behavior_wa_scores.csv",
         "eye_block_path": results_dir / "block_results_summary.csv",
         "merged_block_output_path": results_dir / "behavior_eye_merged.csv",
-        "plot_block1_path": results_dir / "block1_wa_vs_vertical.png",
-        "plot_block2_path": results_dir / "block2_wa_vs_vertical.png",
-        "plot_behavior_3_vs_4_path": results_dir / "behavior_wa_3_vs_4.png",
-        "plot_verticalindex_3_vs_4_path": results_dir / "verticalindex_block1_vs_block2.png",
+        "plot_block1_path": results_dir / "block1_wa_vs_vertical.svg",
+        "plot_block2_path": results_dir / "block2_wa_vs_vertical.svg",
+        "plot_behavior_3_vs_4_path": results_dir / "behavior_wa_3_vs_4.svg",
+        "plot_verticalindex_3_vs_4_path": results_dir / "verticalindex_block1_vs_block2.svg",
         # Pooled-level inputs/outputs
         "behavior_pooled_path": behavior_pooled_path,
         "eye_pooled_path": merged_dir / "subject_vertical_index_total_transitions_merged_blocks.csv",
         "merged_pooled_output_path": merged_dir / "behavior_eye_merged_subject_level_3_4.csv",
         "corr_pooled_output_path": merged_dir / "behavior_eye_correlations_subject_level_3_4.csv",
-        "plot_pooled_output_path": merged_dir / "behavior_vs_verticalindex_subject_3_4.png",
+        "plot_pooled_output_path": merged_dir / "behavior_vs_verticalindex_subject_3_4.svg",
     }
 
 
@@ -230,12 +239,15 @@ def generate_scatter_plot(
     y_label: str,
     title: str,
     output_path: Path,
-    effect_size_r: float | None = None,
+    r_value: float | None = None,
+    p_value: float | None = None,
     show_legend_if_small: bool = True,
+    xlim: tuple[float, float] = (0.0, 1.0),
+    ylim: tuple[float, float] = (0.0, 1.0),
 ) -> None:
     """
-    Unified scatter plot helper: plots x vs y, colors each subject uniquely,
-    annotates each point with subject_id, and overlays Pearson r.
+    Unified scatter plot helper: plots x vs y, overlays regression line,
+    sets dots to black, and shows pearson correlation value with significance stars.
     """
     required_columns = {"subject_id", x_col, y_col}
     missing = required_columns - set(df.columns)
@@ -249,38 +261,54 @@ def generate_scatter_plot(
         print(f"[WARN] No data available to plot for {title}.")
         return
 
-    subjects = plot_df["subject_id"].astype(str).tolist()
-    n_subjects = len(subjects)
-    cmap = plt.get_cmap("tab10")
-    colors = [cmap(i % cmap.N) for i in range(n_subjects)]
-
     plt.figure(figsize=(6, 5))
 
-    for (subject, (_, row), color) in zip(subjects, plot_df.iterrows(), colors):
-        plt.scatter(row[x_col], row[y_col], s=40, alpha=0.8, color=color)
-        plt.annotate(
-            subject,
-            (row[x_col], row[y_col]),
-            textcoords="offset points",
-            xytext=(3, 3),
-            fontsize=8,
-        )
+    # Plot all points in black with no annotation labels
+    plt.scatter(plot_df[x_col], plot_df[y_col], s=40, alpha=0.8, color="black")
+
+    # Add red regression line
+    if len(plot_df) >= 2:
+        slope, intercept, r_val, p_val, std_err = linregress(plot_df[x_col], plot_df[y_col])
+        x_min, x_max = plot_df[x_col].min(), plot_df[x_col].max()
+        x_line = np.array([x_min, x_max])
+        y_line = slope * x_line + intercept
+        plt.plot(x_line, y_line, color="red", linestyle="-", linewidth=1.5)
 
     plt.xlabel(x_label)
     plt.ylabel(y_label)
+    
+    # Capitalize the first letter of the title
+    if title:
+        title = title[0].upper() + title[1:]
     plt.title(title)
 
-    plt.xlim(0, 1)
-    plt.ylim(0, 1)
+    plt.xlim(xlim)
+    plt.ylim(ylim)
 
-    if show_legend_if_small and n_subjects <= 10:
-        plt.legend(title="Subject ID", fontsize=8)
-
-    if effect_size_r is not None:
+    if r_value is not None:
+        r_str = f"{r_value:.2f}"
+        if r_str.startswith("0."):
+            r_str = r_str[1:]
+        elif r_str.startswith("-0."):
+            r_str = "-" + r_str[2:]
+            
+        if p_value is not None:
+            if p_value < 0.001:
+                sig = '***'
+            elif p_value < 0.01:
+                sig = '**'
+            elif p_value < 0.05:
+                sig = '*'
+            else:
+                sig = ''
+        else:
+            sig = ''
+            
+        label_text = f"r = {r_str}{sig}"
         plt.text(
             0.02,
             0.98,
-            f"Effect size\nr = {effect_size_r:.3f}",
+            label_text,
             transform=plt.gca().transAxes,
             va="top",
             ha="left",
@@ -290,7 +318,7 @@ def generate_scatter_plot(
 
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig(output_path, dpi=300)
+    plt.savefig(output_path)
     plt.close()
 
     print(f"Scatter plot saved to: {output_path}")
@@ -398,57 +426,67 @@ def run_block_level_analysis(paths: dict) -> None:
     print("================================\n")
 
     r_block1 = r_block1_dict["pearson_r"] if r_block1_dict else None
+    p_block1 = r_block1_dict["p_value"] if r_block1_dict else None
     r_block2 = r_block2_dict["pearson_r"] if r_block2_dict else None
+    p_block2 = r_block2_dict["p_value"] if r_block2_dict else None
     r_behavior_3_vs_4 = r_behavior_3_vs_4_dict["pearson_r"] if r_behavior_3_vs_4_dict else None
+    p_behavior_3_vs_4 = r_behavior_3_vs_4_dict["p_value"] if r_behavior_3_vs_4_dict else None
     r_vertical_1_vs_2 = r_vertical_1_vs_2_dict["pearson_r"] if r_vertical_1_vs_2_dict else None
+    p_vertical_1_vs_2 = r_vertical_1_vs_2_dict["p_value"] if r_vertical_1_vs_2_dict else None
 
     # Scatter Plots
     generate_scatter_plot(
         merged_df,
-        x_col="wa_score_3",
-        y_col="verticalindex_block1",
-        x_label="Behavioral WA score (higher = more compensatory strategy use)",
-        y_label="VerticalIndex_block (higher = more vertical scanning)",
-        title="Block 1 (3-attribute): Relationship between compensatory strategy use\nand tendency for vertical scanning",
+        x_col="verticalindex_block1",
+        y_col="wa_score_3",
+        x_label="Vertical index",
+        y_label="Behavioural WAV score",
+        title="Relationship between compensatory strategy use\nand tendency for vertical scanning (3-attribute)",
         output_path=paths["plot_block1_path"],
-        effect_size_r=r_block1,
-        show_legend_if_small=True,
+        r_value=r_block1,
+        p_value=p_block1,
+        show_legend_if_small=False,
     )
 
     generate_scatter_plot(
         merged_df,
-        x_col="wa_score_4",
-        y_col="verticalindex_block2",
-        x_label="Behavioral WA score (higher = more compensatory strategy use)",
-        y_label="VerticalIndex_block (higher = more vertical scanning)",
-        title="Block 2 (4-attribute): Relationship between compensatory strategy use\nand tendency for vertical scanning",
+        x_col="verticalindex_block2",
+        y_col="wa_score_4",
+        x_label="Vertical index",
+        y_label="Behavioural WAV score",
+        title="Relationship between compensatory strategy use\nand tendency for vertical scanning (4-attribute)",
         output_path=paths["plot_block2_path"],
-        effect_size_r=r_block2,
-        show_legend_if_small=True,
+        r_value=r_block2,
+        p_value=p_block2,
+        show_legend_if_small=False,
     )
 
     generate_scatter_plot(
         merged_df,
         x_col="wa_score_3",
         y_col="wa_score_4",
-        x_label="WA score 3-attribute block (wa_score_3)",
-        y_label="WA score 4-attribute block (wa_score_4)",
+        x_label="WAV score 3-attribute",
+        y_label="WAV score 4-attribute",
         title="Behavioral tendency for compensatory strategy:\n3-attribute vs 4-attribute blocks",
         output_path=paths["plot_behavior_3_vs_4_path"],
-        effect_size_r=r_behavior_3_vs_4,
-        show_legend_if_small=True,
+        r_value=r_behavior_3_vs_4,
+        p_value=p_behavior_3_vs_4,
+        show_legend_if_small=False,
     )
 
     generate_scatter_plot(
         merged_df,
         x_col="verticalindex_block1",
         y_col="verticalindex_block2",
-        x_label="VerticalIndex_block1 (3-attribute block)",
-        y_label="VerticalIndex_block2 (4-attribute block)",
+        x_label="Verticalindex_3_attribute",
+        y_label="Verticalindex_4_attribute",
         title="Eye-scan vertical index:\n3-attribute block vs 4-attribute block",
         output_path=paths["plot_verticalindex_3_vs_4_path"],
-        effect_size_r=r_vertical_1_vs_2,
-        show_legend_if_small=True,
+        r_value=r_vertical_1_vs_2,
+        p_value=p_vertical_1_vs_2,
+        show_legend_if_small=False,
+        xlim=(0.0, 0.7),
+        ylim=(0.0, 0.7),
     )
 
 
@@ -506,13 +544,14 @@ def run_merged_blocks_analysis(paths: dict) -> None:
     # Plot
     generate_scatter_plot(
         merged_df,
-        x_col="wa_score_pooled_3_4",
-        y_col="VerticalIndex_subject",
-        x_label="Behavioral compensatory tendency",
-        y_label="VerticalIndex_subject (higher = more vertical scanning)",
+        x_col="VerticalIndex_subject",
+        y_col="wa_score_pooled_3_4",
+        x_label="Verticalindex_subject",
+        y_label="Behavioural WAV score",
         title="Behavioral tendency vs merged vertical eye-scan index",
         output_path=paths["plot_pooled_output_path"],
-        effect_size_r=(vertical_corr["pearson_r"] if vertical_corr is not None else None),
+        r_value=(vertical_corr["pearson_r"] if vertical_corr is not None else None),
+        p_value=(vertical_corr["p_value"] if vertical_corr is not None else None),
         show_legend_if_small=False,
     )
 
