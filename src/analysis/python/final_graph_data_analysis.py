@@ -94,12 +94,16 @@ def get_paths() -> dict:
     if explicit_behavior_path.is_file():
         behavior_pooled_path = explicit_behavior_path
     else:
-        default_behavior_path = merged_dir / "behavior_wa_score_relative_pooled_3_4.csv"
-        if default_behavior_path.is_file():
-            behavior_pooled_path = default_behavior_path
+        results_behavior_path = results_dir / "behavior_wa_score_relative_pooled_3_4.csv"
+        if results_behavior_path.is_file():
+            behavior_pooled_path = results_behavior_path
         else:
-            behavior_candidates = sorted(merged_dir.glob("behavior_wa_score_relative_pooled_3_4*.csv"))
-            behavior_pooled_path = behavior_candidates[0] if behavior_candidates else default_behavior_path
+            default_behavior_path = merged_dir / "behavior_wa_score_relative_pooled_3_4.csv"
+            if default_behavior_path.is_file():
+                behavior_pooled_path = default_behavior_path
+            else:
+                behavior_candidates = sorted(merged_dir.glob("behavior_wa_score_relative_pooled_3_4*.csv"))
+                behavior_pooled_path = behavior_candidates[0] if behavior_candidates else default_behavior_path
 
     return {
         "project_root": project_root,
@@ -439,34 +443,36 @@ def run_block_level_analysis(paths: dict) -> None:
         merged_df,
         x_col="verticalindex_block1",
         y_col="wa_score_3",
-        x_label="Vertical index",
+        x_label="Vertical eye-scan index",
         y_label="Behavioural WAV score",
         title="Relationship between compensatory strategy use\nand tendency for vertical scanning (3-attribute)",
         output_path=paths["plot_block1_path"],
         r_value=r_block1,
         p_value=p_block1,
         show_legend_if_small=False,
+        xlim=(0.0, 0.7),
     )
 
     generate_scatter_plot(
         merged_df,
         x_col="verticalindex_block2",
         y_col="wa_score_4",
-        x_label="Vertical index",
+        x_label="Vertical eye-scan index",
         y_label="Behavioural WAV score",
         title="Relationship between compensatory strategy use\nand tendency for vertical scanning (4-attribute)",
         output_path=paths["plot_block2_path"],
         r_value=r_block2,
         p_value=p_block2,
         show_legend_if_small=False,
+        xlim=(0.0, 0.7),
     )
 
     generate_scatter_plot(
         merged_df,
         x_col="wa_score_3",
         y_col="wa_score_4",
-        x_label="WAV score 3-attribute",
-        y_label="WAV score 4-attribute",
+        x_label="WAV score (3-attribute)",
+        y_label="WAV score (4-attribute)",
         title="Behavioral tendency for compensatory strategy:\n3-attribute vs 4-attribute blocks",
         output_path=paths["plot_behavior_3_vs_4_path"],
         r_value=r_behavior_3_vs_4,
@@ -478,8 +484,8 @@ def run_block_level_analysis(paths: dict) -> None:
         merged_df,
         x_col="verticalindex_block1",
         y_col="verticalindex_block2",
-        x_label="Verticalindex_3_attribute",
-        y_label="Verticalindex_4_attribute",
+        x_label="vertical eye-scan index (3-attribute)",
+        y_label="vertical eye-scan index (4-attribute)",
         title="Eye-scan vertical index:\n3-attribute block vs 4-attribute block",
         output_path=paths["plot_verticalindex_3_vs_4_path"],
         r_value=r_vertical_1_vs_2,
@@ -546,13 +552,14 @@ def run_merged_blocks_analysis(paths: dict) -> None:
         merged_df,
         x_col="VerticalIndex_subject",
         y_col="wa_score_pooled_3_4",
-        x_label="Verticalindex_subject",
+        x_label="Vertical eye-scan index",
         y_label="Behavioural WAV score",
-        title="Behavioral tendency vs merged vertical eye-scan index",
+        title="Behavioral tendency vertical eye-scan index - collapsed",
         output_path=paths["plot_pooled_output_path"],
         r_value=(vertical_corr["pearson_r"] if vertical_corr is not None else None),
         p_value=(vertical_corr["p_value"] if vertical_corr is not None else None),
         show_legend_if_small=False,
+        xlim=(0.0, 0.7),
     )
 
 
