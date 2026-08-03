@@ -1,6 +1,13 @@
 # Thesis EyeTracking Project
 
-This project implements a **Variable Attribute Decision-Making Task** using Psychtoolbox and EyeLink, followed by a comprehensive data analysis pipeline that combines MATLAB and Python.
+This project implements a Variable Attribute Decision-Making Task using Psychtoolbox and EyeLink, followed by a comprehensive data analysis pipeline combining MATLAB and Python.
+
+`<participant_number>` is a placeholder for the numeric participant number assigned within the study and is not part of the actual filename. Participant numbering starts at `101` for Experiment 1 and at `201` for Experiment 2.
+
+Examples:
+
+- `101_detailed.csv` — participant 101 from Experiment 1
+- `201_detailed.csv` — participant 201 from Experiment 2
 
 ##  Directory Structure
 
@@ -31,14 +38,14 @@ Thesis_EyeTracking/
 |           +-- __pycache__/             # Python bytecode cache (auto-generated)
 +-- data/                                # Data storage (ignored by Git)
 |   +-- raw/                             # Raw experimental data files
-|   |   +-- Subject_[ID]_eyeData.mat                                # Raw eye-tracking data from EyeLink
-|   |   +-- Subject_[ID]_Results_Decision_Strategy_Experiment.mat   # Behavioral responses and trial parameters
-|   |   +-- Subject_[ID]_Demographics.mat                           # Participant demographic information (optional)
+|   |   +-- Subject_<participant_number>_eyeData.mat                                # Raw eye-tracking data from EyeLink
+|   |   +-- Subject_<participant_number>_Results_Decision_Strategy_Experiment.mat   # Behavioral responses and trial parameters
+|   |   +-- Subject_<participant_number>_Demographics.mat                           # Participant demographic information (optional)
 |   +-- processed/
 |   |   +-- fixations/                   # Processed fixation data
-|   |   |   +-- [ID]_detailed.csv        # Chronological fixation sequences with AOI labels and timings per trial
+|   |   |   +-- <participant_number>_detailed.csv        # Chronological fixation sequences with AOI labels and timings per trial
 |   |   +-- movements/                                                   # Movement classification results
-|   |       +-- [ID]_movements.csv                                       # Trial-by-trial movement logs (Horizontal/Vertical/Ignored transitions)
+|   |       +-- <participant_number>_movements.csv                                       # Trial-by-trial movement logs (Horizontal/Vertical/Ignored transitions)
 |   +-- results/                                                         # Final and intermediate analysis outputs
 |       +-- trial_results_summary.csv                                    # Trial-level Scanpath Index metrics for all subjects
 |       +-- block_results_summary.csv                                    # Block-level aggregated Scanpath Index metrics for all subjects
@@ -72,12 +79,12 @@ This project tracks the complete lifecycle from the live experiment to final cla
 ### 1. Data Collection (Experiment)
 * **Script**: `src/experiment/DM_main_noa.m`
 * **Action**: Runs the decision-making task in Psychtoolbox, records eye position and behavioral responses, and saves subject-level output files for downstream analysis.
-* **Outputs**: `data/raw/` contains subject-level files such as `Subject_[ID]_eyeData.mat`, `Subject_[ID]_Results_Decision_Strategy_Experiment.mat`, and demographics files when available.
+* **Outputs**: `data/raw/` contains subject-level files such as `Subject_<participant_number>_eyeData.mat`, `Subject_<participant_number>_Results_Decision_Strategy_Experiment.mat`, and demographics files when available.
 
 ### 2. Feature Extraction (MATLAB)
 * **Script**: `src/analysis/matlab/Convert_eye_data.m`
 * **Action**: Detects fixations from gaze samples, maps each fixation to predefined Areas of Interest (AOIs), and exports a detailed fixation-level CSV for downstream analysis.
-* **Output**: `data/processed/fixations/[ID]_detailed.csv` (contains a chronological sequence of AOI labels and exact fixation timings per trial).
+* **Output**: `data/processed/fixations/<participant_number>_detailed.csv` (contains a chronological sequence of AOI labels and exact fixation timings per trial).
 
 ### 3. Transition Analysis + Eye Scan Index Calculation*** (Python)
 * **Script**: `src/analysis/python/analyze_movements.py`
@@ -94,7 +101,7 @@ This project tracks the complete lifecycle from the live experiment to final cla
   - `AT1 -> NaN -> B1` produces **0 movements**, because only the consecutive pairs `(AT1, NaN)` and `(NaN, B1)` are checked, and both involve an invalid AOI.
 
 * **Outputs**:
-*  - Detailed trial transitions: `data/processed/movements/[ID]_movements.csv` (one row per recorded movement, including classification, raw AOI labels, fixation order indices, and three timing fields: `From_StartTime_ms`, `To_StartTime_ms`, and `InterFixationInterval_ms = To_StartTime_ms - From_StartTime_ms`).
+*  - Detailed trial transitions: `data/processed/movements/<participant_number>_movements.csv` (one row per recorded movement, including classification, raw AOI labels, fixation order indices, and three timing fields: `From_StartTime_ms`, `To_StartTime_ms`, and `InterFixationInterval_ms = To_StartTime_ms - From_StartTime_ms`).
 *  - **Final Strategy Metrics**: Calculates the Scanpath Index (**H / (H + V)**) aggregated 
 *  at both the **trial level** and the **block level**, and writes two separate summary tables:
 *    - `data/results/trial_results_summary.csv` — trial-level metrics for all subjects.
