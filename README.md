@@ -79,7 +79,7 @@ This project tracks the complete lifecycle from the live experiment to final cla
 * **Action**: Detects fixations from gaze samples, maps each fixation to predefined Areas of Interest (AOIs), and exports a detailed fixation-level CSV for downstream analysis.
 * **Output**: `data/processed/fixations/[ID]_detailed.csv` (contains a chronological sequence of AOI labels and exact fixation timings per trial).
 
-### 3. Transition Analysis & Strategy Classification (Python)
+### 3. Transition Analysis + Eye Scan Index Calculation*** (Python)
 * **Script**: `src/analysis/python/analyze_movements.py`
 * **Action**: Reads the fixation sequences and, for each trial, examines **only consecutive fixation pairs** in the original recorded order (FixationSeq i and i+1). There is **no bridging** over invalid AOIs (e.g., NaNs, blinks, or labels that do not match ATi/Ai/Bi), and invalid pairs are simply ignored and never turned into later inferred movements. A movement is recorded only when both AOIs in the consecutive pair are valid (ATi, Ai, or Bi) and their labels differ. Each valid pair is then classified as:
 *  - **Horizontal**: Two **different** valid AOIs with the **same row index**, even if the kinds differ (e.g., `A1 -> B1`, `AT1 -> B1`, `A1 -> AT1`).
