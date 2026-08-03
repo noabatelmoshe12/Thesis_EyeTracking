@@ -97,27 +97,23 @@ def process_fixations_to_movements(participant_id, csv_path):
 
         Returns
         -------
-        trial_idx : pd.DataFrame
-                Trial-level scanpath index calculations.
-        block_idx : pd.DataFrame
-                Block-level scanpath index calculations.
         result_df : pd.DataFrame
                 The full line-by-line movement history output table.
     """
     if not os.path.exists(csv_path):
         print(f"File not found: {csv_path}")
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        return pd.DataFrame()
 
     try:
         df = pd.read_csv(csv_path)
     except pd.errors.EmptyDataError:
         print(f"Empty CSV: {csv_path}")
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        return pd.DataFrame()
 
     required_cols = {'Block', 'Trial', 'AOI', 'FixationSeq', 'StartTime_ms'}
     if not required_cols.issubset(set(df.columns)):
         print(f"CSV {csv_path} missing required columns.")
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        return pd.DataFrame()
 
     movements = []
 
@@ -236,14 +232,11 @@ def process_fixations_to_movements(participant_id, csv_path):
     result_df.to_csv(out_path, index=False)
     print(f"Saved movement data to: {out_path}")
 
-    # Step 4 & 5: Calculate statistical indices
-    trial_idx, block_idx = calculate_scanpath_index(result_df)
-
-    return trial_idx, block_idx, result_df
+    return result_df
 
 def calculate_scanpath_index(movements_df):
     """
-    Computes trial-level and block-level scan indices for analytical reporting.
+    Computes trial-level scan indices for analytical reporting.
     
     The Scan Index is calculated as: H / (H + V)
     Where:
@@ -251,19 +244,16 @@ def calculate_scanpath_index(movements_df):
     - V: Total number of 'Vertical' transitions.
     - Any 'Ignored' transitions are excluded from this metric entirely.
     
-    Returns (Tuple):
-    ----------------
+    Returns
+    -------
     trial_df : pd.DataFrame
         Detailed index aggregated per trial for time-series / granular analysis.
-    block_df : pd.DataFrame
-        Macro index aggregated per block.
     """
     if movements_df.empty:
-        return pd.DataFrame(), pd.DataFrame()
+        return pd.DataFrame()
         
-    # Create base dataframes representing all unique Subjects, Blocks, and Trials in the input.
+    # Create a base dataframe representing all unique Subjects, Blocks, and Trials in the input.
     base_trials = movements_df[['Subject', 'Block', 'Trial']].drop_duplicates()
-    base_blocks = movements_df[['Subject', 'Block']].drop_duplicates()
 
     # Isolate only the relevant classifications
     hv_df = movements_df[movements_df['Classification'].isin(['Horizontal', 'Vertical'])]
@@ -272,9 +262,7 @@ def calculate_scanpath_index(movements_df):
     if hv_df.empty:
         trial_df = base_trials.copy()
         trial_df['ScanIndex_trial'] = np.nan
-        block_df = base_blocks.copy()
-        block_df['ScanIndex_block'] = np.nan
-        return trial_df, block_df
+        return trial_df
 
     # Pivot to sum Horizontal and Vertical transitions per trial
     trial_counts = hv_df.groupby(['Subject', 'Block', 'Trial', 'Classification']).size().unstack(fill_value=0)
@@ -297,26 +285,4 @@ def calculate_scanpath_index(movements_df):
         
     trial_df = trial_counts
 
-    # BLOCK-LEVEL (Step 5)
-    # Pivot to sum Horizontal and Vertical transitions across the entire block
-    block_counts = hv_df.groupby(['Subject', 'Block', 'Classification']).size().unstack(fill_value=0)
-    block_counts = block_counts.reset_index()
-    
-    # Merge with base_blocks to keep blocks that had 0 H/V transitions
-    block_counts = pd.merge(base_blocks, block_counts, on=['Subject', 'Block'], how='left')
-    
-    for col in ['Horizontal', 'Vertical']:
-        if col not in block_counts.columns:
-            block_counts[col] = 0
-            
-    block_counts['Horizontal'] = block_counts['Horizontal'].fillna(0)
-    block_counts['Vertical'] = block_counts['Vertical'].fillna(0)
-            
-    block_counts['Total'] = block_counts['Horizontal'] + block_counts['Vertical']
-    # Calculate Block Index: H / (H + V) -- guard against div by 0
-    block_counts['ScanIndex_block'] = block_counts.apply(
-        lambda r: r['Horizontal'] / r['Total'] if r['Total'] > 0 else np.nan, axis=1)
-        
-    block_df = block_counts
-
-    return trial_df, block_df
+    return trial_df

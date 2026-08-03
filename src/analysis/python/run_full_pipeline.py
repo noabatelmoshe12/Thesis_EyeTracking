@@ -21,9 +21,9 @@ Workflow Steps:
          subject's fixations into movement sequences with process_fixations_to_movements,
          and accumulates valid movement tables.
      5. Final Metrics & Export:
-         Concatenates all movement data, computes final indices with
-         calculate_scanpath_index, and saves block-level summary output to
-         data/block_results_summary.csv.
+         Concatenates all movement data, computes trial-level indices with
+         calculate_scanpath_index, and saves the trial-level summary output to
+         data/results/trial_results_summary.csv.
 
 Requirements:
         - MATLAB Engine API (matlab.engine) or a system-accessible matlab CLI command.
@@ -65,7 +65,7 @@ def setup_paths():
     for data folders and output files.
 
     Returns a dict with keys: project_root, raw_dir, processed_dir, results_dir,
-    trial_results_file, block_results_file, matlab_script_dir.
+    trial_results_file, matlab_script_dir.
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.abspath(os.path.join(script_dir, "..", "..", ".."))
@@ -74,7 +74,6 @@ def setup_paths():
     processed_dir = os.path.join(project_root, "data", "processed")
     results_dir = os.path.join(project_root, "data", "results")
     trial_results_file = os.path.join(results_dir, "trial_results_summary.csv")
-    block_results_file = os.path.join(results_dir, "block_results_summary.csv")
     matlab_script_dir = os.path.join(project_root, "src", "analysis", "matlab")
 
     print(f"--- Thesis EyeTracking Pipeline ---")
@@ -86,7 +85,6 @@ def setup_paths():
         "processed_dir": processed_dir,
         "results_dir": results_dir,
         "trial_results_file": trial_results_file,
-        "block_results_file": block_results_file,
         "matlab_script_dir": matlab_script_dir,
     }
 
@@ -206,7 +204,7 @@ def aggregate_fixations(paths):
              continue
 
         try:
-            trial_idx, block_idx, df = process_fixations_to_movements(subject_id, csv_path)
+            df = process_fixations_to_movements(subject_id, csv_path)
             if not df.empty:
                 all_movements.append(df)
         except Exception as e:
@@ -219,24 +217,20 @@ def export_results(all_movements, paths):
     """
     Step 5 — Final Metrics & Export.
 
-    Concatenates all movement data, computes final indices with
-    calculate_scanpath_index, and saves trial-level and block-level summaries.
+    Concatenates all movement data, computes trial-level indices with
+    calculate_scanpath_index, and saves the trial-level summary.
     """
     if not all_movements:
         print("No valid movement data found to aggregate.")
         return
 
     total_movements = pd.concat(all_movements, ignore_index=True)
-    trial_results, block_results = calculate_scanpath_index(total_movements)
+    trial_results = calculate_scanpath_index(total_movements)
 
     trial_results.to_csv(paths["trial_results_file"], index=False, na_rep='NaN')
-    block_results.to_csv(paths["block_results_file"], index=False, na_rep='NaN')
 
     print(f"\nPipeline Complete!")
     print(f"Trial summary saved to: {paths['trial_results_file']}")
-    print(f"Block summary saved to: {paths['block_results_file']}")
-    print("\nBlock-level preview:")
-    print(block_results.to_string())
 
 
 def run_full_pipeline():
